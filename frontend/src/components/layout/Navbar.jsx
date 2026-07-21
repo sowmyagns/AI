@@ -16,14 +16,11 @@ import NotificationBell from "../notifications/NotificationBell";
 
 function getPageMeta(pathname, t) {
   if (pathname === "/") {
-    return {
-      title: t("nav.dashboard"),
-      subtitle: t("dashboard.welcomeAdmin"),
-    };
+    return { title: t("nav.dashboard") };
   }
   const segment = pathname.split("/").filter(Boolean)[0] || "dashboard";
   const title = segment.charAt(0).toUpperCase() + segment.replace(/-/g, " ").slice(1);
-  return { title, subtitle: null };
+  return { title };
 }
 
 export default function Navbar({ onMenuClick }) {
@@ -39,7 +36,7 @@ export default function Navbar({ onMenuClick }) {
   const displayName = user?.full_name || user?.name || "User";
   const firstName = String(displayName).trim().split(/\s+/)[0] || "User";
   const welcomeLabel = `Welcome, ${firstName}`;
-  const displayRole = user?.role || t("nav.superAdmin");
+  const displayRole = user?.role_name || user?.role || "";
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60_000);
@@ -105,9 +102,6 @@ export default function Navbar({ onMenuClick }) {
             <p className="mt-0.5 text-xs font-medium text-teal-700 sm:text-sm">
               {welcomeLabel}
             </p>
-            {page.subtitle && (
-              <p className="mt-0.5 hidden text-xs text-slate-500 sm:block leading-snug">{page.subtitle}</p>
-            )}
           </div>
         </div>
 

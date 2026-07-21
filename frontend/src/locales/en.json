@@ -62,6 +62,18 @@
     "breakdownMaintenance": "Breakdown Maintenance",
     "machineHistory": "Machine History",
     "maintenanceSchedule": "Maintenance Schedule",
+    "alerts": "Alerts",
+    "allAlerts": "All Alerts",
+    "lowStockAlerts": "Low Stock",
+    "machineFailureAlerts": "Machine Failure",
+    "productionDelayAlerts": "Production Delay",
+    "maintenanceAlerts": "Maintenance",
+    "documents": "Documents",
+    "allDocuments": "All Documents",
+    "purchaseDocuments": "Purchase",
+    "productionDocuments": "Production",
+    "qualityDocuments": "Quality",
+    "reportDocuments": "Reports",
     "analytics": "Analytics",
     "executiveDashboard": "CEO Dashboard",
     "liveDashboard": "Live Dashboard",
@@ -280,8 +292,7 @@
     "moduleShortcuts": "Modules",
     "goodMorning": "Good morning",
     "goodAfternoon": "Good afternoon",
-    "goodEvening": "Good evening",
-    "welcomeAdmin": "Welcome back, Admin! Here's what's happening in your factory today."
+    "goodEvening": "Good evening"
   },
   "refDashboard": {
     "totalOrders": "Total Orders",

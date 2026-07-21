@@ -3,9 +3,11 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   BarChart3,
+  Bell,
   Boxes,
   CheckCircle2,
   Factory,
+  FolderOpen,
   Landmark,
   Layers,
   LayoutDashboard,
@@ -35,6 +37,8 @@ const ICON_BY_KEY = {
   finance: Landmark,
   quality: CheckCircle2,
   maintenance: Wrench,
+  alerts: Bell,
+  documents: FolderOpen,
   analytics: BarChart3,
   settings: Settings,
   admin: Settings,

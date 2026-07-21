@@ -4,6 +4,18 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  server: {
+    port: 5173,
+    proxy: {
+      // Only proxy paths that do not collide with React Router SPA routes.
+      // Do NOT proxy /settings, /documents, /alerts — those are frontend pages.
+      "/auth": { target: "http://127.0.0.1:8000", changeOrigin: true },
+      "/api": { target: "http://127.0.0.1:8000", changeOrigin: true },
+      "/sidebar": { target: "http://127.0.0.1:8000", changeOrigin: true },
+      "/platform": { target: "http://127.0.0.1:8000", changeOrigin: true },
+      "/health": { target: "http://127.0.0.1:8000", changeOrigin: true },
+    },
+  },
   test: {
     environment: "jsdom",
     globals: true,

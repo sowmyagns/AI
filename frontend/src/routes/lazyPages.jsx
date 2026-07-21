@@ -127,6 +127,7 @@ export const ExecutiveDashboard = lazy(() => import("../pages/analytics/Executiv
 export const LiveDashboard = lazy(() => import("../pages/analytics/LiveDashboard"));
 export const ProfitAnalysis = lazy(() => import("../pages/analytics/ProfitAnalysis"));
 export const ForecastingDashboard = lazy(() => import("../pages/analytics/ForecastingDashboard"));
+export const AlertsDashboard = lazy(() => import("../pages/alerts/AlertsDashboard"));
 export const AllAlerts = lazy(() => import("../pages/alerts/AllAlerts"));
 export const LowStockAlerts = lazy(() => import("../pages/alerts/LowStockAlerts"));
 export const MachineFailureAlerts = lazy(() => import("../pages/alerts/MachineFailureAlerts"));
@@ -136,6 +137,7 @@ export const UserManagement = lazy(() => import("../pages/admin/UserManagement")
 export const RolesPermissions = lazy(() => import("../pages/admin/RolesPermissions"));
 export const AccessLogs = lazy(() => import("../pages/admin/AccessLogs"));
 export const IntegrationsDashboard = lazy(() => import("../pages/admin/IntegrationsDashboard"));
+export const DocumentsDashboard = lazy(() => import("../pages/documents/DocumentsDashboard"));
 export const PurchaseDocuments = lazy(() => import("../pages/documents/PurchaseDocuments"));
 export const ProductionFiles = lazy(() => import("../pages/documents/ProductionFiles"));
 export const QualityCertificates = lazy(() => import("../pages/documents/QualityCertificates"));

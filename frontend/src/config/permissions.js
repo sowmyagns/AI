@@ -22,18 +22,18 @@ export const MODULES = [
 export const ROLE_PERMISSIONS = {
   Admin: MODULES,
   "Production Manager": [
-    "dashboard", "production", "quality", "analytics", "factoryMonitor", "alerts", "masters",
+    "dashboard", "production", "quality", "analytics", "factoryMonitor", "alerts", "documents", "masters",
   ],
   "Store Manager": [
-    "dashboard", "inventory", "procurement", "masters", "alerts", "analytics",
+    "dashboard", "inventory", "procurement", "masters", "alerts", "documents", "analytics",
   ],
-  "HR Manager": ["dashboard", "hr", "attendance", "analytics", "alerts"],
+  "HR Manager": ["dashboard", "hr", "attendance", "analytics", "alerts", "documents"],
   Accountant: ["dashboard", "accounts", "sales", "documents", "analytics", "alerts"],
   Operator: [
-    "dashboard", "production", "factoryMonitor", "attendance",
+    "dashboard", "production", "factoryMonitor", "attendance", "documents",
     "production:read", "production:create_entry", "production:update_qty",
     "production:update_machine_status", "production:report_breakdown",
-    "attendance:read",
+    "attendance:read", "documents:read",
   ],
 };
 

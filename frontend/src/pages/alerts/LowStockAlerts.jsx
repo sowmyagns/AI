@@ -2,14 +2,14 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Package } from "lucide-react";
 
-import AlertsView from "./AlertsView";
+import AlertsDashboard from "./AlertsDashboard";
 
 export default function LowStockAlerts() {
   const { t } = useTranslation();
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+      <div className="mx-4 mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:mx-6 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
         <div className="flex items-start gap-3">
           <Package className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
@@ -33,12 +33,10 @@ export default function LowStockAlerts() {
           </div>
         </div>
       </div>
-      <AlertsView
+      <AlertsDashboard
         title="Low Stock Alerts"
         subtitle="Items at or below their reorder level."
-        alertType="low_stock"
-        allowCreate={false}
-        syncOnLoad
+        initialAlertType="low_stock"
       />
     </div>
   );

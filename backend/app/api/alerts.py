@@ -3,14 +3,17 @@ from sqlalchemy.orm import Session
 
 from app.api.auth_deps import get_current_user
 from app.api.deps import get_db
-from app.core.permissions import require_permission, tenant_scope
+from app.core.permissions import require_permission, tenant_scope, user_is_admin
 from app.models.user import User
 from app.schemas.alert import AlertCreate, AlertRead
 from app.schemas.operator import NotificationReadRequest
 from app.services.alert_service import (
     acknowledge_alert,
     create_alert,
+    delete_alert,
+    get_alert,
     list_alerts,
+    resolve_alert,
     sync_low_stock_alerts,
 )
 from app.services.notification_management_service import NotificationManagementService
@@ -83,6 +86,18 @@ def sync_low_stock_endpoint(
     return sync_low_stock_alerts(db, tenant_id)
 
 
+@router.get("/{alert_id}", response_model=AlertRead)
+def get_alert_endpoint(
+    alert_id: int,
+    tenant_id: int = Depends(tenant_scope(MODULE)),
+    db: Session = Depends(get_db),
+) -> AlertRead:
+    alert = get_alert(db, alert_id, tenant_id)
+    if not alert:
+        raise HTTPException(404, "Alert not found")
+    return alert
+
+
 @router.post("/{alert_id}/acknowledge")
 def acknowledge_alert_endpoint(
     alert_id: int,
@@ -93,3 +108,40 @@ def acknowledge_alert_endpoint(
     if not alert:
         raise HTTPException(404, "Alert not found")
     return {"acknowledged": True, "id": alert.id}
+
+
+@router.put("/{alert_id}/acknowledge", response_model=AlertRead)
+def acknowledge_alert_put_endpoint(
+    alert_id: int,
+    tenant_id: int = Depends(tenant_scope(MODULE)),
+    db: Session = Depends(get_db),
+) -> AlertRead:
+    alert = acknowledge_alert(db, alert_id, tenant_id)
+    if not alert:
+        raise HTTPException(404, "Alert not found")
+    return alert
+
+
+@router.put("/{alert_id}/resolve", response_model=AlertRead)
+def resolve_alert_endpoint(
+    alert_id: int,
+    tenant_id: int = Depends(tenant_scope(MODULE)),
+    db: Session = Depends(get_db),
+) -> AlertRead:
+    alert = resolve_alert(db, alert_id, tenant_id)
+    if not alert:
+        raise HTTPException(404, "Alert not found")
+    return alert
+
+
+@router.delete("/{alert_id}")
+def delete_alert_endpoint(
+    alert_id: int,
+    user: User = Depends(require_permission(MODULE)),
+    db: Session = Depends(get_db),
+):
+    if not user_is_admin(user):
+        raise HTTPException(403, "Only administrators can delete alerts")
+    if not delete_alert(db, alert_id, user.tenant_id):
+        raise HTTPException(404, "Alert not found")
+    return {"deleted": True, "id": alert_id}

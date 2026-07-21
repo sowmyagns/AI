@@ -1,4 +1,4 @@
-import { createContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useEffect, useMemo, useState } from "react";
 
 import { getCurrentUser, logout as logoutApi } from "../api/authApi";
 import { setUnauthorizedHandler } from "../api/axiosConfig";
@@ -70,7 +70,7 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  const login = (authData) => {
+  const login = useCallback((authData) => {
     let u;
     if (typeof authData === "object" && authData !== null) {
       const token = authData.access_token ?? authData.token;
@@ -100,9 +100,9 @@ export function AuthProvider({ children }) {
         localStorage.setItem("smrt-company-name", u.tenant_name);
       }
     } catch {}
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       const refreshToken = localStorage.getItem("smrt-refresh-token");
       if (refreshToken) {
@@ -115,9 +115,9 @@ export function AuthProvider({ children }) {
       localStorage.removeItem("smrt-token");
       localStorage.removeItem("smrt-refresh-token");
     } catch {}
-  };
+  }, []);
 
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     try {
       const token = localStorage.getItem("smrt-token");
       if (!token) return;
@@ -128,7 +128,7 @@ export function AuthProvider({ children }) {
     } catch {
       /* ignore */
     }
-  };
+  }, []);
 
   const value = useMemo(
     () => ({
@@ -138,7 +138,7 @@ export function AuthProvider({ children }) {
       logout,
       refreshUser,
     }),
-    [user]
+    [user, login, logout, refreshUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

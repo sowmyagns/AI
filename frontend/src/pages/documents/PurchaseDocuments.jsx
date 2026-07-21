@@ -1,11 +1,11 @@
-import DocumentsView from "./DocumentsView";
+import DocumentsDashboard from "./DocumentsDashboard";
 
 export default function PurchaseDocuments() {
   return (
-    <DocumentsView
+    <DocumentsDashboard
       title="Purchase Documents"
       subtitle="Purchase orders, invoices, and supplier paperwork."
-      docType="purchase"
+      initialDocType="purchase"
     />
   );
 }

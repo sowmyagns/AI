@@ -1,8 +1,10 @@
 import {
   BarChart3,
+  Bell,
   Boxes,
   CheckCircle2,
   Factory,
+  FolderOpen,
   Landmark,
   Layers,
   LayoutDashboard,
@@ -139,6 +141,30 @@ export const SIDEBAR_NAV = [
       { labelKey: "erpNav.breakdownMaintenance", to: "/maintenance/breakdowns", module: "maintenance" },
       { labelKey: "erpNav.machineHistory", to: "/maintenance/machine-history", module: "maintenance" },
       { labelKey: "erpNav.maintenanceSchedule", to: "/maintenance/schedule", module: "maintenance" },
+    ],
+  },
+  {
+    key: "alerts",
+    labelKey: "erpNav.alerts",
+    icon: Bell,
+    children: [
+      { labelKey: "erpNav.allAlerts", to: "/alerts", module: "alerts", end: true },
+      { labelKey: "erpNav.lowStockAlerts", to: "/alerts/low-stock", module: "alerts" },
+      { labelKey: "erpNav.machineFailureAlerts", to: "/alerts/machine-failure", module: "alerts" },
+      { labelKey: "erpNav.productionDelayAlerts", to: "/alerts/production-delay", module: "alerts" },
+      { labelKey: "erpNav.maintenanceAlerts", to: "/alerts/maintenance", module: "alerts" },
+    ],
+  },
+  {
+    key: "documents",
+    labelKey: "erpNav.documents",
+    icon: FolderOpen,
+    children: [
+      { labelKey: "erpNav.allDocuments", to: "/documents", module: "documents", end: true },
+      { labelKey: "erpNav.purchaseDocuments", to: "/documents/purchase", module: "documents" },
+      { labelKey: "erpNav.productionDocuments", to: "/documents/production", module: "documents" },
+      { labelKey: "erpNav.qualityDocuments", to: "/documents/quality", module: "documents" },
+      { labelKey: "erpNav.reportDocuments", to: "/documents/reports", module: "documents" },
     ],
   },
   {

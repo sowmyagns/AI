@@ -31,6 +31,13 @@ def list_alerts(
     return list(db.scalars(stmt).all())
 
 
+def get_alert(db: Session, alert_id: int, tenant_id: int) -> Alert | None:
+    alert = db.get(Alert, alert_id)
+    if not alert or alert.tenant_id != tenant_id:
+        return None
+    return alert
+
+
 def acknowledge_alert(db: Session, alert_id: int, tenant_id: int | None = None) -> Alert | None:
     alert = db.get(Alert, alert_id)
     if not alert:
@@ -42,6 +49,27 @@ def acknowledge_alert(db: Session, alert_id: int, tenant_id: int | None = None) 
     db.commit()
     db.refresh(alert)
     return alert
+
+
+def resolve_alert(db: Session, alert_id: int, tenant_id: int) -> Alert | None:
+    alert = get_alert(db, alert_id, tenant_id)
+    if not alert:
+        return None
+    alert.status = "resolved"
+    if not alert.acknowledged_at:
+        alert.acknowledged_at = datetime.utcnow()
+    db.commit()
+    db.refresh(alert)
+    return alert
+
+
+def delete_alert(db: Session, alert_id: int, tenant_id: int) -> bool:
+    alert = get_alert(db, alert_id, tenant_id)
+    if not alert:
+        return False
+    db.delete(alert)
+    db.commit()
+    return True
 
 
 def sync_low_stock_alerts(db: Session, tenant_id: int) -> list[Alert]:

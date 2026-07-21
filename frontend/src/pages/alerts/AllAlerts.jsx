@@ -1,10 +1,10 @@
-import AlertsView from "./AlertsView";
+import AlertsDashboard from "./AlertsDashboard";
 
 export default function AllAlerts() {
   return (
-    <AlertsView
+    <AlertsDashboard
       title="All Alerts"
-      subtitle="Every alert across the system. Acknowledge to clear."
+      subtitle="Every alert across the system. Acknowledge, resolve, or export."
     />
   );
 }

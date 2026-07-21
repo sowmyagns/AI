@@ -1,11 +1,11 @@
-import AlertsView from "./AlertsView";
+import AlertsDashboard from "./AlertsDashboard";
 
 export default function ProductionDelayAlerts() {
   return (
-    <AlertsView
+    <AlertsDashboard
       title="Production Delay Alerts"
       subtitle="Work orders falling behind schedule."
-      alertType="production_delay"
+      initialAlertType="production_delay"
     />
   );
 }

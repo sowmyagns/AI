@@ -1,11 +1,11 @@
-import AlertsView from "./AlertsView";
+import AlertsDashboard from "./AlertsDashboard";
 
 export default function MachineFailureAlerts() {
   return (
-    <AlertsView
+    <AlertsDashboard
       title="Machine Failure Alerts"
       subtitle="Machines reporting faults or breakdowns."
-      alertType="machine_failure"
+      initialAlertType="machine_failure"
     />
   );
 }

@@ -4,6 +4,15 @@
 
 export const SETTINGS_CATEGORIES = [
   {
+    id: "my-account",
+    title: "My Account",
+    description: "Your profile, company, role, and subscription overview.",
+    icon: "UserRound",
+    accent: "bg-teal-500",
+    soft: "bg-teal-50 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300",
+    keywords: ["my account", "profile", "me", "user", "role", "subscription", "company"],
+  },
+  {
     id: "company",
     title: "Company Profile",
     description: "Logo, legal identity, GST, address, timezone, and currency.",
@@ -183,7 +192,6 @@ export const LEGACY_SETTINGS_REDIRECTS = {
   production: "production",
   gst: "finance",
   buyers: "integrations",
-  documents: "documents",
   finance: "finance",
 };
 

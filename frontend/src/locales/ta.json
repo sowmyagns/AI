@@ -167,8 +167,7 @@
     "moduleShortcuts": "தொகுதிகள்",
     "goodMorning": "காலை வணக்கம்",
     "goodAfternoon": "மதிய வணக்கம்",
-    "goodEvening": "மாலை வணக்கம்",
-    "welcomeAdmin": "மீண்டும் வரவேற்கிறோம், நிர்வாகி! இன்று உங்கள் தொழிற்சாலையில் என்ன நடக்கிறது."
+    "goodEvening": "மாலை வணக்கம்"
   },
   "refDashboard": {
     "totalOrders": "மொத்த ஆர்டர்கள்",

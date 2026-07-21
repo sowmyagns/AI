@@ -59,6 +59,7 @@ PERMISSION_MATRIX = {
             "analytics",
             "factoryMonitor",
             "alerts",
+            "documents",
             "masters",
         ],
         "description": (
@@ -73,6 +74,7 @@ PERMISSION_MATRIX = {
             "procurement",
             "masters",
             "alerts",
+            "documents",
             "analytics",
         ],
         "description": (
@@ -81,7 +83,7 @@ PERMISSION_MATRIX = {
         ),
     },
     "HR Manager": {
-        "modules": ["dashboard", "hr", "attendance", "analytics", "alerts"],
+        "modules": ["dashboard", "hr", "attendance", "analytics", "alerts", "documents"],
         "description": "Dashboard, Employees, Attendance, Leave, Payroll, Recruitment, HR Reports.",
     },
     "Accountant": {
@@ -104,6 +106,7 @@ PERMISSION_MATRIX = {
             "production",
             "factoryMonitor",
             "attendance",
+            "documents",
         ],
         "actions": [
             "production:read",
@@ -112,6 +115,7 @@ PERMISSION_MATRIX = {
             "production:update_machine_status",
             "production:report_breakdown",
             "attendance:read",
+            "documents:read",
         ],
         "description": (
             "Dashboard, Assigned Work Orders, Schedule, Shop Floor, "
@@ -258,6 +262,32 @@ SIDEBAR_MENU_CATALOG = [
             {"label": "Preventive", "path": "/maintenance/preventive", "module": "maintenance"},
             {"label": "Breakdowns", "path": "/maintenance/breakdowns", "module": "maintenance"},
             {"label": "Machine History", "path": "/maintenance/machine-history", "module": "maintenance"},
+        ],
+    },
+    {
+        "key": "alerts",
+        "label": "Alerts",
+        "path": None,
+        "module": "alerts",
+        "children": [
+            {"label": "All Alerts", "path": "/alerts", "module": "alerts"},
+            {"label": "Low Stock", "path": "/alerts/low-stock", "module": "alerts"},
+            {"label": "Machine Failure", "path": "/alerts/machine-failure", "module": "alerts"},
+            {"label": "Production Delay", "path": "/alerts/production-delay", "module": "alerts"},
+            {"label": "Maintenance", "path": "/alerts/maintenance", "module": "alerts"},
+        ],
+    },
+    {
+        "key": "documents",
+        "label": "Documents",
+        "path": None,
+        "module": "documents",
+        "children": [
+            {"label": "All Documents", "path": "/documents", "module": "documents"},
+            {"label": "Purchase", "path": "/documents/purchase", "module": "documents"},
+            {"label": "Production", "path": "/documents/production", "module": "documents"},
+            {"label": "Quality", "path": "/documents/quality", "module": "documents"},
+            {"label": "Reports", "path": "/documents/reports", "module": "documents"},
         ],
     },
     {

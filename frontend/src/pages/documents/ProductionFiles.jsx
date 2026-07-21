@@ -1,11 +1,11 @@
-import DocumentsView from "./DocumentsView";
+import DocumentsDashboard from "./DocumentsDashboard";
 
 export default function ProductionFiles() {
   return (
-    <DocumentsView
+    <DocumentsDashboard
       title="Production Files"
       subtitle="Drawings, specs, and production-related documents."
-      docType="production"
+      initialDocType="production"
     />
   );
 }

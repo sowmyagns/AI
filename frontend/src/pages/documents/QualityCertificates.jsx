@@ -1,11 +1,11 @@
-import DocumentsView from "./DocumentsView";
+import DocumentsDashboard from "./DocumentsDashboard";
 
 export default function QualityCertificates() {
   return (
-    <DocumentsView
+    <DocumentsDashboard
       title="Quality Certificates"
       subtitle="Inspection certificates and compliance documents."
-      docType="quality"
+      initialDocType="quality"
     />
   );
 }

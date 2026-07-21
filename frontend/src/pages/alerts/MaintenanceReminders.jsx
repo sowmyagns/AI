@@ -1,11 +1,11 @@
-import AlertsView from "./AlertsView";
+import AlertsDashboard from "./AlertsDashboard";
 
 export default function MaintenanceReminders() {
   return (
-    <AlertsView
+    <AlertsDashboard
       title="Maintenance Reminders"
       subtitle="Upcoming and overdue maintenance tasks."
-      alertType="maintenance"
+      initialAlertType="maintenance"
     />
   );
 }

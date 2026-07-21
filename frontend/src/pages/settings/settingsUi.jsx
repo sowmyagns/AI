@@ -5,20 +5,29 @@ export function SettingsCard({ title, description, icon: Icon, soft, onClick }) 
     <button
       type="button"
       onClick={onClick}
-      className="group flex h-full w-full flex-col rounded-2xl border border-slate-200/90 bg-white p-5 text-left shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-teal-300 hover:shadow-lg dark:border-slate-700 dark:bg-slate-800/80 dark:hover:border-teal-600"
+      className="group flex w-full items-start gap-3.5 rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-teal-300 hover:bg-teal-50/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/30 dark:border-slate-700 dark:bg-slate-800/80 dark:hover:border-teal-600 dark:hover:bg-teal-950/20"
     >
-      <div className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl ${soft}`}>
-        <Icon className="h-6 w-6" />
+      <div
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${soft}`}
+      >
+        <Icon className="h-5 w-5" strokeWidth={1.75} />
       </div>
-      <h3 className="text-base font-semibold text-slate-900 group-hover:text-teal-700 dark:text-slate-100 dark:group-hover:text-teal-300">
-        {title}
-      </h3>
-      <p className="mt-1.5 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-        {description}
-      </p>
-      <span className="mt-4 text-xs font-semibold uppercase tracking-wide text-teal-600 opacity-0 transition group-hover:opacity-100 dark:text-teal-400">
-        Open →
-      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+            {title}
+          </h3>
+          <span
+            aria-hidden
+            className="shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-teal-600 dark:text-slate-600 dark:group-hover:text-teal-400"
+          >
+            →
+          </span>
+        </div>
+        <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-slate-500 dark:text-slate-400">
+          {description}
+        </p>
+      </div>
     </button>
   );
 }
@@ -90,13 +99,13 @@ export function ToggleRow({ label, description, checked, onChange }) {
   );
 }
 
-export function SkeletonCards({ count = 8 }) {
+export function SkeletonCards({ count = 9 }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className="h-40 animate-pulse rounded-2xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800"
+          className="h-[4.5rem] animate-pulse rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800"
         />
       ))}
     </div>

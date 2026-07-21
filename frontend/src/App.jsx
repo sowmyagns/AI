@@ -7,28 +7,30 @@ import Navbar from "./components/layout/Navbar";
 import Sidebar from "./components/layout/Sidebar";
 import Breadcrumbs from "./components/common/Breadcrumbs";
 
+/** Routes that render without the ERP shell (sidebar + navbar). */
+function isShellLessRoute(pathname) {
+  if (
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname === "/landing" ||
+    pathname === "/forgot-password" ||
+    pathname === "/reset-password" ||
+    pathname === "/verify-email"
+  ) {
+    return true;
+  }
+  if (pathname.startsWith("/gns-admin")) return true;
+  if (pathname.startsWith("/settings")) return true;
+  return false;
+}
+
 export default function App() {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const isAuthRoute =
-    location.pathname === "/login" ||
-    location.pathname === "/register" ||
-    location.pathname === "/landing";
 
-  if (isAuthRoute) {
+  if (isShellLessRoute(location.pathname)) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
-        <Suspense fallback={<RouteFallback />}>
-          <AppRoutes />
-        </Suspense>
-      </div>
-    );
-  }
-
-  const isSettingsRoute = location.pathname.startsWith("/settings");
-  if (isSettingsRoute) {
-    return (
-      <div className="min-h-screen bg-slate-100 dark:bg-slate-900">
         <Suspense fallback={<RouteFallback />}>
           <AppRoutes />
         </Suspense>

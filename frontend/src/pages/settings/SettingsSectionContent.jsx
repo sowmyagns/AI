@@ -20,6 +20,7 @@ import useSettings from "../../context/SettingsContext";
 import { useToast } from "../../context/ToastContext";
 import AuditLogsPanel from "../../components/settings/AuditLogsPanel";
 import LoginHistoryPanel from "../../components/settings/LoginHistoryPanel";
+import AccountOverviewCard from "../../components/settings/AccountOverviewCard";
 import SettingsDeliveryLocation from "./SettingsDeliveryLocation";
 import SettingsDocumentNumberFormat from "./SettingsDocumentNumberFormat";
 import SettingsMyPermissions from "./SettingsMyPermissions";
@@ -88,16 +89,12 @@ function CompanySection() {
           city: "",
           state: "",
           pincode: "",
-          country: regional.country || "India",
-          timezone: regional.timezone || "Asia/Kolkata",
-          currency: regional.currency || currency || "INR",
-          language: regional.language || language || "English",
           ...(res.data || {}),
-          country: regional.country || "India",
-          timezone: regional.timezone || "Asia/Kolkata",
-          currency: regional.currency || currency || "INR",
-          language: regional.language || language || "English",
         };
+        data.country = data.country || regional.country || "India";
+        data.timezone = data.timezone || regional.timezone || "Asia/Kolkata";
+        data.currency = data.currency || regional.currency || currency || "INR";
+        data.language = data.language || regional.language || language || "English";
         setForm(data);
         setBaseline(data);
       } catch {
@@ -1044,6 +1041,14 @@ function HelpSection() {
   );
 }
 
+function MyAccountSection() {
+  return (
+    <PanelShell title="My Account" description="Your live profile, company, and subscription overview.">
+      <AccountOverviewCard />
+    </PanelShell>
+  );
+}
+
 function AboutSection() {
   const { user } = useAuth();
   return (
@@ -1085,6 +1090,7 @@ function SubscriptionSection() {
 export default function SettingsSectionContent({ sectionId }) {
   const map = useMemo(
     () => ({
+      "my-account": MyAccountSection,
       company: CompanySection,
       users: UsersSection,
       security: SecuritySection,

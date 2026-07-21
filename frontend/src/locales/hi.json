@@ -167,8 +167,7 @@
     "moduleShortcuts": "मॉड्यूल",
     "goodMorning": "सुप्रभात",
     "goodAfternoon": "नमस्कार",
-    "goodEvening": "शुभ संध्या",
-    "welcomeAdmin": "वापसी पर स्वागत है, एडमिन! आज आपके कारखाने में यह हो रहा है।"
+    "goodEvening": "शुभ संध्या"
   },
   "refDashboard": {
     "totalOrders": "कुल आदेश",
