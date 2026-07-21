@@ -107,7 +107,7 @@ class ExecutiveHubRead(BaseModel):
     production_trend: list[ChartPoint]
     inventory_value_trend: list[ChartPoint]
     machine_health: list[ChartPoint]
-    quality_pass_rate: float = 94.5
+    quality_pass_rate: float = 0
     ai_insights: list[AiInsight]
     last_updated: str
 

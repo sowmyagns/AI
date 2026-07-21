@@ -124,7 +124,7 @@ def get_ar_summary(db: Session, tenant_id: int) -> ARSummaryRead:
         for i in invs
         if i.status in ("sent", "pending", "partial")
     )
-    credit_cust = len({i.customer_id for i in invs if float(i.grand_total or 0) > float(i.amount_paid or 0)}) or 18
+    credit_cust = len({i.customer_id for i in invs if float(i.grand_total or 0) > float(i.amount_paid or 0)})
     aging = {"0-30": 0.0, "31-60": 0.0, "61-90": 0.0, "90+": 0.0}
     for i in invs:
         bal = float(i.grand_total or 0) - float(i.amount_paid or 0)
@@ -143,7 +143,7 @@ def get_ar_summary(db: Session, tenant_id: int) -> ARSummaryRead:
         aging_0_30=aging["0-30"],
         aging_31_60=aging["31-60"],
         aging_61_90=aging["61-90"],
-        aging_90_plus=aging["90+"] or 1_40_000,
+        aging_90_plus=aging["90+"],
     )
 
 
@@ -286,8 +286,31 @@ def get_gl_summary(db: Session, tenant_id: int) -> GLSummaryRead:
     )
     revenue = rev + inc
     expenses = exp
-    assets = revenue * 1.8
-    liabilities = expenses * 0.6
+    cash_in = float(
+        db.scalar(
+            select(func.coalesce(func.sum(Payment.amount), 0)).where(Payment.tenant_id == tenant_id)
+        )
+        or 0
+    )
+    cash_out = float(
+        db.scalar(
+            select(func.coalesce(func.sum(SupplierPayment.amount), 0)).where(
+                SupplierPayment.tenant_id == tenant_id
+            )
+        )
+        or 0
+    )
+    cash_balance = cash_in - cash_out
+    assets = cash_balance + rev  # receivable proxy not duplicated here
+    liabilities = expenses * 0.0 + float(
+        db.scalar(
+            select(func.coalesce(func.sum(VendorBill.amount), 0)).where(
+                VendorBill.tenant_id == tenant_id,
+                VendorBill.status.in_(("pending", "due", "overdue")),
+            )
+        )
+        or 0
+    )
     equity = assets - liabilities
     return GLSummaryRead(
         total_assets=assets,
@@ -295,7 +318,7 @@ def get_gl_summary(db: Session, tenant_id: int) -> GLSummaryRead:
         equity=equity,
         revenue=revenue,
         expenses=expenses,
-        cash_balance=12_50_000,
+        cash_balance=cash_balance,
     )
 
 
@@ -448,42 +471,82 @@ def get_finance_hub(db: Session, tenant_id: int) -> FinanceHubRead:
     gl = get_gl_summary(db, tenant_id)
     gst = get_gst_extended(db, tenant_id, date.today().year)
     pl = get_pl_extended(db, tenant_id, date.today().year)
-    months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"]
+
+    # Build last-6-month cash flow from real customer / vendor payments
+    cash_flow_trend = []
+    vendor_payments = []
+    customer_receipts = []
+    today = date.today()
+    for i in range(5, -1, -1):
+        m = today.month - i
+        y = today.year
+        while m <= 0:
+            m += 12
+            y -= 1
+        label = date(y, m, 1).strftime("%b")
+        start = date(y, m, 1)
+        if m == 12:
+            end = date(y + 1, 1, 1)
+        else:
+            end = date(y, m + 1, 1)
+        inflow = float(
+            db.scalar(
+                select(func.coalesce(func.sum(Payment.amount), 0)).where(
+                    Payment.tenant_id == tenant_id,
+                    Payment.payment_date >= start,
+                    Payment.payment_date < end,
+                )
+            )
+            or 0
+        )
+        outflow = float(
+            db.scalar(
+                select(func.coalesce(func.sum(SupplierPayment.amount), 0)).where(
+                    SupplierPayment.tenant_id == tenant_id,
+                    SupplierPayment.payment_date >= start,
+                    SupplierPayment.payment_date < end,
+                )
+            )
+            or 0
+        )
+        cash_flow_trend.append({"month": label, "inflow": inflow, "outflow": outflow})
+        vendor_payments.append({"month": label, "amount": outflow})
+        customer_receipts.append({"month": label, "amount": inflow})
+
+    alerts = []
+    if ar.overdue > 0:
+        alerts.append({"type": "overdue", "message": f"₹{ar.overdue:,.0f} overdue from customers"})
+    if gst.gst_payable > 0:
+        alerts.append({"type": "gst", "message": f"GST payable ₹{gst.gst_payable:,.0f}"})
+    if ap.overdue_bills > 0:
+        alerts.append({"type": "ap", "message": f"{ap.overdue_bills} vendor bills overdue"})
+
     return FinanceHubRead(
         total_receivables=ar.total_receivables,
         outstanding_payables=ap.outstanding_payables,
         cash_balance=gl.cash_balance,
-        monthly_revenue=pl.revenue / 12,
-        monthly_expenses=pl.total_expenses / 12,
-        net_profit=pl.net_profit / 12,
+        monthly_revenue=pl.revenue / 12 if pl.revenue else 0,
+        monthly_expenses=pl.total_expenses / 12 if pl.total_expenses else 0,
+        net_profit=pl.net_profit / 12 if pl.net_profit else 0,
         gst_payable=gst.gst_payable,
-        cash_flow_trend=[{"month": m, "inflow": 38_00_000 + i * 2_00_000, "outflow": 28_00_000 + i * 1_50_000} for i, m in enumerate(months)],
-        revenue_trend=pl.monthly_revenue,
-        expense_trend=pl.expense_trend,
-        profit_trend=pl.profit_trend,
-        gst_trend=gst.gst_trend,
-        vendor_payments=[{"month": m, "amount": 18_00_000 + i * 1_00_000} for i, m in enumerate(months)],
-        customer_receipts=[{"month": m, "amount": 22_00_000 + i * 1_50_000} for i, m in enumerate(months)],
-        monthly_cost=pl.expense_trend,
-        department_cost=pl.department_cost,
-        manufacturing_cost=pl.factory_cost,
-        budget_vs_actual=[
-            {"name": "Production", "budget": 15_00_000, "actual": 14_20_000},
-            {"name": "Sales", "budget": 5_00_000, "actual": 4_80_000},
-            {"name": "HR", "budget": 8_00_000, "actual": 8_50_000},
-        ],
+        cash_flow_trend=cash_flow_trend,
+        revenue_trend=pl.monthly_revenue or [],
+        expense_trend=pl.expense_trend or [],
+        profit_trend=pl.profit_trend or [],
+        gst_trend=gst.gst_trend or [],
+        vendor_payments=vendor_payments,
+        customer_receipts=customer_receipts,
+        monthly_cost=pl.expense_trend or [],
+        department_cost=pl.department_cost or [],
+        manufacturing_cost=pl.factory_cost or [],
+        budget_vs_actual=[],
         accounts_aging=[
             {"bucket": "0-30 Days", "amount": ar.aging_0_30},
             {"bucket": "31-60 Days", "amount": ar.aging_31_60},
             {"bucket": "61-90 Days", "amount": ar.aging_61_90},
             {"bucket": "90+ Days", "amount": ar.aging_90_plus},
         ],
-        alerts=[
-            {"type": "overdue", "message": f"₹{ar.overdue / 100000:.1f}L overdue from customers"},
-            {"type": "gst", "message": f"GSTR-3B filing due — ₹{gst.gst_payable / 100000:.1f}L payable"},
-            {"type": "ap", "message": f"{ap.overdue_bills} vendor bills overdue"},
-            {"type": "budget", "message": "HR department over budget by 6.25%"},
-        ],
+        alerts=alerts,
     )
 
 

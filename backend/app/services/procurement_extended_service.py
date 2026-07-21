@@ -246,8 +246,8 @@ def get_vendor_bill_summary(db: Session, tenant_id: int) -> VendorBillSummaryRea
     outstanding = sum(float(b.amount or 0) for b in bills if b.status in ("pending", "due"))
     return VendorBillSummaryRead(
         total_bills=len(bills),
-        due_bills=sum(1 for b in bills if b.status == "due") or 8,
-        paid=sum(1 for b in bills if b.status == "paid") or 28,
+        due_bills=sum(1 for b in bills if b.status == "due"),
+        paid=sum(1 for b in bills if b.status == "paid"),
         outstanding=outstanding,
     )
 

@@ -85,6 +85,30 @@ def get_production_hub(db: Session, tenant_id: int) -> ProductionHubRead:
 
     machine_status = [{"name": m.name, "status": m.status, "code": m.code} for m in machines[:8]]
 
+    from app.models.inventory import InventoryItem, StockLevel
+    from app.models.quality import QualityInspection
+
+    items = list(db.scalars(select(InventoryItem).where(InventoryItem.tenant_id == tenant_id)).all())
+    levels = {
+        sl.item_id: float(sl.quantity or 0)
+        for sl in db.scalars(select(StockLevel)).all()
+    }
+    shortages = 0
+    available = 0
+    for item in items:
+        qty = levels.get(item.id, 0)
+        reorder = int(getattr(item, "reorder_level", 0) or 0)
+        if qty > 0:
+            available += 1
+        if reorder and qty <= reorder:
+            shortages += 1
+
+    insp = list(
+        db.scalars(
+            select(QualityInspection).where(QualityInspection.tenant_id == tenant_id)
+        ).all()
+    )
+
     return ProductionHubRead(
         running_jobs=running_jobs,
         machines_running=running_m,
@@ -92,12 +116,12 @@ def get_production_hub(db: Session, tenant_id: int) -> ProductionHubRead:
         machines_down=down_m,
         production_in_progress=in_progress,
         production_completed_today=completed_today,
-        material_shortages=0,
-        material_available=0,
+        material_shortages=shortages,
+        material_available=available,
         operators_present=present,
         operators_absent=max(total_users - present, 0),
-        quality_passed=0,
-        quality_failed=0,
+        quality_passed=sum(1 for i in insp if i.result == "pass"),
+        quality_failed=sum(1 for i in insp if i.result in ("fail", "failed")),
         recent_jobs=recent,
         machine_status=machine_status,
     )

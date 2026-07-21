@@ -16,7 +16,8 @@ import AnalyticsKpiCard from "../../components/analytics/AnalyticsKpiCard";
 import DrillDownBreadcrumb from "../../components/analytics/DrillDownBreadcrumb";
 import { useToast } from "../../context/ToastContext";
 import { getFinanceAnalytics } from "../../api/analyticsApi";
-import { CHART_COLORS, DEMO_FINANCE, SOURCE_LINKS, formatInr } from "../../data/analyticsMasterData";
+import { CHART_COLORS, SOURCE_LINKS, formatInr } from "../../data/analyticsMasterData";
+import useManufacturingRefresh from "../../hooks/useManufacturingRefresh";
 
 const KPI_ICONS = {
   revenue: IndianRupee, expenses: TrendingDown, profit: TrendingUp, margin: Percent,
@@ -24,12 +25,18 @@ const KPI_ICONS = {
   operating: BarChart3, monthly_profit: TrendingUp, ebitda: IndianRupee, working_capital: Wallet,
 };
 
+const emptyData = {
+  kpis: [], alerts: [], revenue_vs_expense: [], cash_flow: [],
+  profit_trend: [], expense_category: [], receivable_aging: [],
+  monthly_margin: [], drill_revenue: [], last_updated: null,
+};
+
 export default function FinanceAnalytics() {
   const { addToast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState(DEMO_FINANCE);
+  const [data, setData] = useState(emptyData);
   const [autoRefresh, setAutoRefresh] = useState(false);
-  const [drillTrail, setDrillTrail] = useState(DEMO_FINANCE.drill_revenue || []);
+  const [drillTrail, setDrillTrail] = useState([]);
   const [filters, setFilters] = useState({
     fiscalYear: "2025-26", month: "All Months", quarter: "All Quarters",
     plant: "All Plants", dateFrom: "", dateTo: "",
@@ -40,24 +47,30 @@ export default function FinanceAnalytics() {
     try {
       const res = await getFinanceAnalytics();
       if (res.data) {
-        setData({ ...DEMO_FINANCE, ...res.data });
-        setDrillTrail(res.data.drill_revenue .drill_revenue);
+        setData({ ...emptyData, ...res.data });
+        setDrillTrail(res.data.drill_revenue || []);
+      } else {
+        setData(emptyData);
+        setDrillTrail([]);
       }
     } catch {
-      setData(DEMO_FINANCE);
+      setData(emptyData);
+      setDrillTrail([]);
+      addToast("Failed to load finance analytics", "error");
     } finally {
       setLoading(false);
     }
   }, [addToast]);
 
   useEffect(() => { load(); }, [load]);
+  useManufacturingRefresh(load);
   useEffect(() => {
     if (!autoRefresh) return undefined;
     const t = setInterval(load, 60000);
     return () => clearInterval(t);
   }, [autoRefresh, load]);
 
-  if (loading && !data.kpis) return <Loader label="Loading finance analytics..." />;
+  if (loading && !data.kpis?.length) return <Loader label="Loading finance analytics..." />;
   const setF = (k) => (v) => setFilters((f) => ({ ...f, [k]: v }));
 
   return (
@@ -140,8 +153,8 @@ export default function FinanceAnalytics() {
         <AnalyticsChartCard id="chart-expense-cat" title="Expense Category" data={data.expense_category} sourceLink={SOURCE_LINKS.finance} sourceLabel="Finance">
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
-              <Pie data={data.expense_category} dataKey="value" nameKey="label" cx="50%" cy="50%" outerRadius={100} label>
-                {data.expense_category.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+              <Pie data={data.expense_category || []} dataKey="value" nameKey="label" cx="50%" cy="50%" outerRadius={100} label>
+                {(data.expense_category || []).map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
               </Pie>
               <Tooltip formatter={(v) => [`${v}%`, "Share"]} />
               <Legend />
@@ -166,7 +179,7 @@ export default function FinanceAnalytics() {
             <LineChart data={data.monthly_margin}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="label" fontSize={11} />
-              <YAxis fontSize={11} domain={[0, 40]} tickFormatter={(v) => `${v}%`} />
+              <YAxis fontSize={11} tickFormatter={(v) => `${v}%`} />
               <Tooltip formatter={(v) => [`${v}%`, "Margin"]} />
               <Line type="monotone" dataKey="value" stroke={CHART_COLORS[4]} strokeWidth={2} />
             </LineChart>

@@ -67,11 +67,11 @@ def get_quotation_summary(db: Session, tenant_id: int) -> QuotationSummaryRead:
     quotes = list(db.scalars(select(Quotation).where(Quotation.tenant_id == tenant_id)).all())
     return QuotationSummaryRead(
         total_quotations=len(quotes),
-        draft=sum(1 for q in quotes if q.status == "draft") or 12,
-        sent=sum(1 for q in quotes if q.status == "sent") or 28,
-        accepted=sum(1 for q in quotes if q.status == "accepted") or 32,
-        rejected=sum(1 for q in quotes if q.status == "rejected") or 8,
-        expired=sum(1 for q in quotes if q.status == "expired") or 5,
+        draft=sum(1 for q in quotes if q.status == "draft"),
+        sent=sum(1 for q in quotes if q.status == "sent"),
+        accepted=sum(1 for q in quotes if q.status == "accepted"),
+        rejected=sum(1 for q in quotes if q.status == "rejected"),
+        expired=sum(1 for q in quotes if q.status == "expired"),
     )
 
 
@@ -84,7 +84,7 @@ def list_quotations_enriched(db: Session, tenant_id: int) -> list[QuotationListR
             id=q.id,
             quote_number=q.quote_number,
             customer_name=q.customer_name,
-            sales_person=getattr(q, "sales_person", None) or "Anita Desai",
+            sales_person=getattr(q, "sales_person", None),
             amount=float(q.total_amount or 0),
             valid_until=q.valid_until.isoformat() if q.valid_until else None,
             status=q.status,
@@ -98,12 +98,12 @@ def get_so_summary(db: Session, tenant_id: int) -> SOSummaryRead:
     revenue = sum(float(o.total_amount or 0) for o in orders)
     return SOSummaryRead(
         total_orders=len(orders),
-        pending=sum(1 for o in orders if o.status in ("draft", "pending")) or 18,
-        confirmed=sum(1 for o in orders if o.status == "confirmed") or 45,
+        pending=sum(1 for o in orders if o.status in ("draft", "pending")),
+        confirmed=sum(1 for o in orders if o.status == "confirmed"),
         packed=sum(1 for o in orders if o.packed),
         shipped=sum(1 for o in orders if o.shipped),
-        delivered=sum(1 for o in orders if o.status in ("delivered", "closed")) or 12,
-        cancelled=sum(1 for o in orders if o.status == "cancelled") or 3,
+        delivered=sum(1 for o in orders if o.status in ("delivered", "closed")),
+        cancelled=sum(1 for o in orders if o.status == "cancelled"),
         revenue=revenue,
     )
 

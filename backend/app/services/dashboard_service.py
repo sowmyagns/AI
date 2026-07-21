@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 
 from app.models.machine import Machine
 from app.models.production import DailyProductionReport, ProductionOrder, WorkOrder
+from app.models.inventory import InventoryItem, StockLevel, StockMovement, Warehouse
+from app.models.sales import Invoice, SalesOrder
 from app.models.user import User
 from app.services.notification_management_service import get_user_notifications
 from app.services.shop_floor_service import get_shop_floor_summary
@@ -60,8 +62,6 @@ def _top_machines(machines: list[Machine], limit: int = 5) -> list[dict]:
     result = []
     for machine in ranked[:limit]:
         util = float(machine.efficiency_pct or machine.oee_pct or 0)
-        if util <= 0:
-            util = 50.0
         result.append({
             "id": machine.code or f"M-{machine.id}",
             "name": machine.name,
@@ -226,10 +226,115 @@ def get_erp_dashboard(db: Session, tenant_id: int, user: User | None = None) -> 
 
     prod_trend, prod_up = _trend_pct(today_production, yesterday_production)
     good_trend, good_up = prod_trend, prod_up
-    reject_trend, reject_up = _trend_pct(reject_qty, max(1, reject_qty - 5))
+    yesterday_reject = int(sum(float(r.scrap_quantity or 0) for r in yesterday_reports))
+    reject_trend, reject_up = _trend_pct(reject_qty, yesterday_reject)
 
     shop = get_shop_floor_summary(db, tenant_id)
     overview = _production_overview(db, tenant_id, 7)
+
+    # Inventory blocks for dashboard (real stock only)
+    items = list(db.scalars(select(InventoryItem).where(InventoryItem.tenant_id == tenant_id)).all())
+    levels = list(db.scalars(select(StockLevel)).all())
+    level_by_item: dict[int, float] = {}
+    for sl in levels:
+        level_by_item[sl.item_id] = level_by_item.get(sl.item_id, 0) + float(sl.quantity or 0)
+
+    raw_qty = fg_qty = wip_qty = 0.0
+    raw_value = fg_value = 0.0
+    low_stock = 0
+    for item in items:
+        qty = level_by_item.get(item.id, 0)
+        cost = float(item.unit_cost or 0) * qty
+        itype = (getattr(item, "item_type", None) or getattr(item, "category", None) or "").lower()
+        if "finish" in itype or itype in ("fg", "finished_good", "finished"):
+            fg_qty += qty
+            fg_value += cost
+        elif "wip" in itype:
+            wip_qty += qty
+        else:
+            raw_qty += qty
+            raw_value += cost
+        reorder = int(getattr(item, "reorder_level", 0) or 0)
+        if reorder and qty <= reorder:
+            low_stock += 1
+
+    warehouses = list(db.scalars(select(Warehouse).where(Warehouse.tenant_id == tenant_id)).all())
+    warehouse_locations = []
+    for wh in warehouses[:8]:
+        wh_levels = [sl for sl in levels if sl.warehouse_id == wh.id]
+        warehouse_locations.append({
+            "id": wh.id,
+            "name": wh.name,
+            "code": getattr(wh, "code", None),
+            "quantity": sum(float(sl.quantity or 0) for sl in wh_levels),
+        })
+
+    inventory_blocks = [
+        {"key": "raw", "label": "Raw Materials", "quantity": int(raw_qty), "value": round(raw_value, 2)},
+        {"key": "wip", "label": "WIP", "quantity": int(wip_qty), "value": 0},
+        {"key": "fg", "label": "Finished Goods", "quantity": int(fg_qty), "value": round(fg_value, 2)},
+        {"key": "low_stock", "label": "Low Stock Items", "quantity": low_stock, "value": 0},
+    ]
+
+    so_today = int(
+        db.scalar(
+            select(func.count(SalesOrder.id)).where(
+                SalesOrder.tenant_id == tenant_id,
+                SalesOrder.order_date == today,
+            )
+        )
+        or 0
+    )
+    shipped_today = int(
+        db.scalar(
+            select(func.count(SalesOrder.id)).where(
+                SalesOrder.tenant_id == tenant_id,
+                SalesOrder.shipped.is_(True),
+                SalesOrder.order_date == today,
+            )
+        )
+        or 0
+    )
+    inv_today = int(
+        db.scalar(
+            select(func.count(Invoice.id)).where(
+                Invoice.tenant_id == tenant_id,
+                Invoice.issue_date == today,
+            )
+        )
+        or 0
+    )
+    stock_moves_today = 0
+    try:
+        stock_moves_today = int(
+            db.scalar(
+                select(func.count(StockMovement.id)).where(
+                    StockMovement.tenant_id == tenant_id,
+                    func.date(StockMovement.created_at) == today,
+                )
+            )
+            or 0
+        )
+    except Exception:
+        stock_moves_today = int(
+            db.scalar(
+                select(func.count(StockMovement.id)).where(
+                    StockMovement.tenant_id == tenant_id
+                )
+            )
+            or 0
+        )
+
+    todays_summary = [
+        {"label": "Production output", "value": today_production, "unit": "pcs"},
+        {"label": "Work orders active", "value": in_progress_orders, "unit": ""},
+        {"label": "Sales orders today", "value": so_today, "unit": ""},
+        {"label": "Shipments (SO date)", "value": shipped_today, "unit": ""},
+        {"label": "Invoices issued", "value": inv_today, "unit": ""},
+        {"label": "Stock movements", "value": stock_moves_today, "unit": ""},
+        {"label": "Rejects / scrap", "value": reject_qty, "unit": "pcs"},
+        {"label": "Machines running", "value": running_machines, "unit": f"/ {total_machines}"},
+    ]
 
     production_orders = list(
         db.scalars(
@@ -371,5 +476,8 @@ def get_erp_dashboard(db: Session, tenant_id: int, user: User | None = None) -> 
             "oee_pct": shop.oee_pct,
         },
         "recent_production_orders": recent_orders,
+        "inventory_blocks": inventory_blocks,
+        "warehouse_locations": warehouse_locations,
+        "todays_summary": todays_summary,
         "date": today.isoformat(),
     }

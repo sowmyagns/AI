@@ -16,7 +16,8 @@ import AnalyticsDashboardHeader from "../../components/analytics/AnalyticsDashbo
 import AnalyticsKpiCard from "../../components/analytics/AnalyticsKpiCard";
 import { useToast } from "../../context/ToastContext";
 import { getExecutiveHub } from "../../api/analyticsApi";
-import { CHART_COLORS, DEMO_EXECUTIVE, formatInr } from "../../data/analyticsMasterData";
+import { CHART_COLORS, formatInr } from "../../data/analyticsMasterData";
+import useManufacturingRefresh from "../../hooks/useManufacturingRefresh";
 
 const KPI_ICONS = {
   revenue: IndianRupee, profit: TrendingUp, production: Factory, inventory: Box,
@@ -24,25 +25,30 @@ const KPI_ICONS = {
   quality: CheckCircle,
 };
 
+const emptyData = { kpis: [], alerts: [], benchmarks: [], revenue_trend: [], production_trend: [], inventory_value_trend: [], machine_health: [], ai_insights: [] };
+
 export default function ExecutiveDashboard() {
   const { addToast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState(DEMO_EXECUTIVE);
+  const [data, setData] = useState(emptyData);
   const [autoRefresh, setAutoRefresh] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const res = await getExecutiveHub();
-      if (res.data) setData({ ...DEMO_EXECUTIVE, ...res.data });
+      if (res.data) setData({ ...emptyData, ...res.data });
+      else setData(emptyData);
     } catch {
-      setData(DEMO_EXECUTIVE);
+      setData(emptyData);
+      addToast("Failed to load executive hub", "error");
     } finally {
       setLoading(false);
     }
   }, [addToast]);
 
   useEffect(() => { load(); }, [load]);
+  useManufacturingRefresh(load);
   useEffect(() => {
     if (!autoRefresh) return undefined;
     const t = setInterval(load, 60000);

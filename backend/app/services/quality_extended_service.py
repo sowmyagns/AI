@@ -120,12 +120,12 @@ def get_process_summary(db: Session, tenant_id: int) -> ProcessQCSummaryRead:
         ).all()
     )
     return ProcessQCSummaryRead(
-        production_running=8,
-        qc_pending=sum(1 for r in rows if (r.status or r.result) == "pending") or 6,
-        passed=sum(1 for r in rows if r.result == "pass") or 42,
-        failed=sum(1 for r in rows if r.result in ("fail", "failed")) or 4,
-        rework=sum(1 for r in rows if r.result == "rework") or 3,
-        scrap=sum(1 for r in rows if r.status == "scrap") or 2,
+        production_running=sum(1 for r in rows if (r.status or "").lower() in ("in_progress", "running")),
+        qc_pending=sum(1 for r in rows if (r.status or r.result) == "pending"),
+        passed=sum(1 for r in rows if r.result == "pass"),
+        failed=sum(1 for r in rows if r.result in ("fail", "failed")),
+        rework=sum(1 for r in rows if r.result == "rework"),
+        scrap=sum(1 for r in rows if r.status == "scrap"),
     )
 
 
@@ -150,11 +150,11 @@ def get_final_summary(db: Session, tenant_id: int) -> FinalQCSummaryRead:
         ).all()
     )
     return FinalQCSummaryRead(
-        pending_final=sum(1 for r in rows if (r.status or r.result) == "pending") or 4,
-        passed=sum(1 for r in rows if r.result == "pass") or 18,
-        failed=sum(1 for r in rows if r.result in ("fail", "failed")) or 2,
-        packed=sum(1 for r in rows if r.packing_status == "packed") or 14,
-        ready_dispatch=sum(1 for r in rows if r.approval == "approved") or 10,
+        pending_final=sum(1 for r in rows if (r.status or r.result) == "pending"),
+        passed=sum(1 for r in rows if r.result == "pass"),
+        failed=sum(1 for r in rows if r.result in ("fail", "failed")),
+        packed=sum(1 for r in rows if r.packing_status == "packed"),
+        ready_dispatch=sum(1 for r in rows if r.approval == "approved"),
     )
 
 
@@ -224,11 +224,11 @@ def get_defect_summary(db: Session, tenant_id: int) -> DefectSummaryRead:
     defects = list(db.scalars(select(Defect).where(Defect.tenant_id == tenant_id)).all())
     return DefectSummaryRead(
         total_defects=len(defects),
-        open=sum(1 for d in defects if d.status in ("open", "new")) or 8,
-        in_progress=sum(1 for d in defects if d.status == "in_progress") or 6,
-        resolved=sum(1 for d in defects if d.status in ("resolved", "closed")) or 10,
-        critical=sum(1 for d in defects if d.severity == "critical") or 2,
-        capa_pending=sum(1 for d in defects if d.corrective_action and d.status != "closed") or 5,
+        open=sum(1 for d in defects if d.status in ("open", "new")),
+        in_progress=sum(1 for d in defects if d.status == "in_progress"),
+        resolved=sum(1 for d in defects if d.status in ("resolved", "closed")),
+        critical=sum(1 for d in defects if d.severity == "critical"),
+        capa_pending=sum(1 for d in defects if d.corrective_action and d.status != "closed"),
     )
 
 
@@ -266,12 +266,14 @@ def get_quality_hub(db: Session, tenant_id: int) -> QualityHubRead:
     insp = list(db.scalars(select(QualityInspection).where(QualityInspection.tenant_id == tenant_id)).all())
     defects = list(db.scalars(select(Defect).where(Defect.tenant_id == tenant_id)).all())
     batch_sum = get_batch_summary(db, tenant_id)
-    passed = sum(1 for i in insp if i.result == "pass") or 156
-    failed = sum(1 for i in insp if i.result in ("fail", "failed")) or 12
-    rejected = sum(1 for i in insp if i.status == "rejected") or 6
-    total = len(insp) or passed + failed + rejected
-    defect_rate = (len(defects) / total * 100) if total else 4.2
-    months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"]
+    passed = sum(1 for i in insp if i.result == "pass")
+    failed = sum(1 for i in insp if i.result in ("fail", "failed"))
+    rejected = sum(1 for i in insp if i.status == "rejected")
+    total = len(insp)
+    defect_rate = (len(defects) / total * 100) if total else 0.0
+    pending = max(total - passed - failed, 0)
+    open_critical = sum(1 for d in defects if d.severity == "critical" and d.status not in ("closed", "resolved"))
+    pending_insp = sum(1 for i in insp if (i.status or i.result) == "pending")
     return QualityHubRead(
         total_inspections=total,
         passed=passed,
@@ -279,51 +281,34 @@ def get_quality_hub(db: Session, tenant_id: int) -> QualityHubRead:
         rejected=rejected,
         yield_pct=batch_sum.yield_pct,
         defect_rate=round(defect_rate, 1),
-        pass_vs_fail=[{"name": "Pass", "count": passed}, {"name": "Fail", "count": failed}, {"name": "Pending", "count": total - passed - failed}],
-        defect_trend=[{"month": m, "count": 8 + i * 2} for i, m in enumerate(months)],
-        monthly_yield=[{"month": m, "yield": 92 + i * 0.5} for i, m in enumerate(months)],
-        supplier_quality=[
-            {"name": "Tata Steel", "score": 92},
-            {"name": "SKF India", "score": 88},
-            {"name": "Bosch India", "score": 95},
+        pass_vs_fail=[
+            {"name": "Pass", "count": passed},
+            {"name": "Fail", "count": failed},
+            {"name": "Pending", "count": pending},
         ],
-        machine_defects=[
-            {"name": "CNC-01", "defects": 5},
-            {"name": "Press-03", "defects": 8},
-            {"name": "Lathe-02", "defects": 3},
-        ],
-        pareto_defects=[
-            {"name": "Dimensional", "count": 12},
-            {"name": "Surface Finish", "count": 8},
-            {"name": "Material Defect", "count": 6},
-            {"name": "Assembly", "count": 4},
-        ],
-        root_cause_analysis=[
-            {"cause": "Operator Error", "count": 10},
-            {"cause": "Machine Calibration", "count": 7},
-            {"cause": "Raw Material", "count": 5},
-        ],
-        defect_by_product=[
-            {"name": "Component A", "count": 9},
-            {"name": "Finished B", "count": 6},
-            {"name": "Spare C", "count": 4},
-        ],
-        qc_performance=[
-            {"inspector": "Priya Sharma", "inspections": 45, "pass_rate": 96},
-            {"inspector": "Ravi Kumar", "inspections": 38, "pass_rate": 94},
-        ],
+        defect_trend=[],
+        monthly_yield=[],
+        supplier_quality=[],
+        machine_defects=[],
+        pareto_defects=[],
+        root_cause_analysis=[],
+        defect_by_product=[],
+        qc_performance=[],
         recent_inspections=[
-            {"number": i.inspection_number, "type": i.inspection_type, "result": i.result, "date": i.inspection_date.isoformat() if i.inspection_date else None}
+            {
+                "number": i.inspection_number,
+                "type": i.inspection_type,
+                "result": i.result,
+                "date": i.inspection_date.isoformat() if i.inspection_date else None,
+            }
             for i in insp[:5]
-        ] or [
-            {"number": "IQC-2026-0042", "type": "incoming", "result": "pass", "date": "2026-07-09"},
-            {"number": "PQC-2026-0088", "type": "in_process", "result": "pass", "date": "2026-07-09"},
-            {"number": "FQC-2026-0018", "type": "final", "result": "pending", "date": "2026-07-09"},
         ],
         alerts=[
-            {"type": "pending", "message": "5 incoming inspections pending QC approval"},
-            {"type": "defect", "message": "2 critical defects require CAPA closure"},
-            {"type": "yield", "message": "Batch BATCH-8842 yield dropped to 88%"},
-            {"type": "calibration", "message": "Vernier caliper calibration due in 3 days"},
+            a
+            for a in [
+                {"type": "pending", "message": f"{pending_insp} inspections pending QC"} if pending_insp else None,
+                {"type": "defect", "message": f"{open_critical} critical defects open"} if open_critical else None,
+            ]
+            if a
         ],
     )

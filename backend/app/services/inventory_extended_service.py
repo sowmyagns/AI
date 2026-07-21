@@ -443,13 +443,30 @@ def get_inventory_hub(db: Session, tenant_id: int) -> InventoryHubRead:
         wh_stock.append({"name": wh.name, "quantity": qty})
     materials = list_materials_enriched(db, tenant_id)
     top = sorted(materials, key=lambda m: m.quantity, reverse=True)[:10]
+    from datetime import date
+    from app.models.inventory import StockMovement
+
+    todays_tx = 0
+    try:
+        todays_tx = int(
+            db.scalar(
+                select(func.count(StockMovement.id)).where(
+                    StockMovement.tenant_id == tenant_id,
+                    func.date(StockMovement.created_at) == date.today(),
+                )
+            )
+            or 0
+        )
+    except Exception:
+        todays_tx = 0
+
     return InventoryHubRead(
         total_inventory_value=mat_sum.stock_value + fg_sum["stock_value"],
         low_stock_items=mat_sum.low_stock,
-        dead_stock=5,
-        fast_moving=18,
-        slow_moving=12,
-        todays_transactions=34,
-        warehouse_stock=wh_stock or [{"name": "Main WH", "quantity": 5000}],
+        dead_stock=sum(1 for m in materials if m.quantity == 0),
+        fast_moving=sum(1 for m in materials if m.quantity > 0 and getattr(m, "status", "") != "slow"),
+        slow_moving=sum(1 for m in materials if getattr(m, "status", "") in ("slow", "slow_moving")),
+        todays_transactions=todays_tx,
+        warehouse_stock=wh_stock,
         top_materials=[{"name": m.name, "qty": m.quantity} for m in top[:10]],
     )

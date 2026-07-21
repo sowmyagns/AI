@@ -3,15 +3,17 @@ import { Link } from "react-router-dom";
 import { AlertTriangle, IndianRupee, RefreshCw, ShoppingCart, Truck, Users } from "lucide-react";
 
 import Loader from "../../components/common/Loader";
+import ManufacturingWorkflowBar from "../../components/manufacturing/ManufacturingWorkflowBar";
 import { useToast } from "../../context/ToastContext";
 import { getProcurementHub } from "../../api/procurementApi";
-import { DEMO_PROCUREMENT_HUB, formatInr, PROCUREMENT_FLOW } from "../../data/procurementMasterData";
+import { formatInr, PROCUREMENT_FLOW } from "../../data/procurementMasterData";
+import useManufacturingRefresh from "../../hooks/useManufacturingRefresh";
 
 function KpiCard({ label, value, icon: Icon, color }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between">
-        <div><p className="text-xs font-medium text-slate-500">{label}</p><p className="mt-1 text-xl font-bold tabular-nums text-slate-900">{value}</p></div>
+        <div><p className="text-xs font-medium text-slate-500">{label}</p><p className="mt-1 text-xl font-bold tabular-nums text-slate-900">{value ?? 0}</p></div>
         {Icon && <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${color}`}><Icon className="h-5 w-5 text-white" /></div>}
       </div>
     </div>
@@ -19,24 +21,32 @@ function KpiCard({ label, value, icon: Icon, color }) {
 }
 
 const alertIcons = { low_stock: AlertTriangle, delayed_po: Truck, pending_rfq: ShoppingCart, overdue_bill: IndianRupee, late_vendor: Users, rejected_qc: AlertTriangle };
+const emptyHub = {
+  purchase_spend: 0, pending_approvals: 0, open_rfqs: 0, active_vendors: 0,
+  outstanding_bills: 0, todays_deliveries: 0, top_vendors: [], pending_orders: [], alerts: [],
+};
 
 export default function SupplyChainDashboard() {
   const { addToast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [hub, setHub] = useState(DEMO_PROCUREMENT_HUB);
+  const [hub, setHub] = useState(emptyHub);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const res = await getProcurementHub();
-      if (res.data) setHub({ ...DEMO_PROCUREMENT_HUB, ...res.data });
+      if (res.data) setHub({ ...emptyHub, ...res.data });
+      else setHub(emptyHub);
     } catch {
+      addToast("Failed to load procurement hub", "error");
+      setHub(emptyHub);
     } finally {
       setLoading(false);
     }
   }, [addToast]);
 
   useEffect(() => { load(); }, [load]);
+  useManufacturingRefresh(load);
 
   if (loading) return <Loader label="Loading procurement dashboard..." />;
 
@@ -49,6 +59,8 @@ export default function SupplyChainDashboard() {
         </div>
         <button type="button" onClick={load} className="inline-flex items-center gap-2 rounded-lg border bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"><RefreshCw className="h-4 w-4" /> Refresh</button>
       </header>
+
+      <ManufacturingWorkflowBar currentStepId="purchase_order" />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <KpiCard label="Purchase Spend" value={formatInr(hub.purchase_spend)} icon={IndianRupee} color="bg-blue-600" />

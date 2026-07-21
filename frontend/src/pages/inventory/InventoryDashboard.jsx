@@ -6,13 +6,15 @@ import Loader from "../../components/common/Loader";
 import StoreManagerNav from "../../components/inventory/StoreManagerNav";
 import { useToast } from "../../context/ToastContext";
 import { getInventoryHub } from "../../api/inventoryApi";
-import { DEMO_INVENTORY_HUB, INVENTORY_FLOW, formatInr } from "../../data/inventoryMasterData";
+import { INVENTORY_FLOW, formatInr } from "../../data/inventoryMasterData";
+import useManufacturingRefresh from "../../hooks/useManufacturingRefresh";
+import ManufacturingWorkflowBar from "../../components/manufacturing/ManufacturingWorkflowBar";
 
 function KpiCard({ label, value, icon: Icon, color }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between">
-        <div><p className="text-xs font-medium text-slate-500">{label}</p><p className="mt-1 text-xl font-bold tabular-nums text-slate-900">{value}</p></div>
+        <div><p className="text-xs font-medium text-slate-500">{label}</p><p className="mt-1 text-xl font-bold tabular-nums text-slate-900">{value ?? 0}</p></div>
         {Icon && <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${color}`}><Icon className="h-5 w-5 text-white" /></div>}
       </div>
     </div>
@@ -31,18 +33,23 @@ const QUICK_LINKS = [
 export default function InventoryDashboard() {
   const { addToast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [hub, setHub] = useState(DEMO_INVENTORY_HUB);
+  const [hub, setHub] = useState({});
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const res = await getInventoryHub();
-      if (res?.data) setHub({ ...DEMO_INVENTORY_HUB, ...res.data });
-    } catch { }
+      if (res?.data) setHub(res.data);
+      else setHub({});
+    } catch {
+      addToast("Failed to load inventory hub", "error");
+      setHub({});
+    }
     finally { setLoading(false); }
   }, [addToast]);
 
   useEffect(() => { load(); }, [load]);
+  useManufacturingRefresh(load);
 
   if (loading) return <div className="space-y-6"><StoreManagerNav /><Loader label="Loading inventory dashboard..." /></div>;
 
@@ -53,6 +60,8 @@ export default function InventoryDashboard() {
         <div><h1 className="text-2xl font-bold text-slate-900">Inventory Dashboard</h1><p className="mt-1 text-sm text-slate-500">Enterprise inventory control — value, movement, ABC analysis, and warehouse overview.</p></div>
         <button type="button" onClick={load} className="inline-flex items-center gap-2 rounded-lg border bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"><RefreshCw className="h-4 w-4" /> Refresh</button>
       </header>
+
+      <ManufacturingWorkflowBar currentStepId="raw_material" />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
         <KpiCard label="Inventory Value" value={formatInr(hub.total_inventory_value)} icon={TrendingUp} color="bg-[#2563EB]" />

@@ -16,19 +16,27 @@ import AnalyticsKpiCard from "../../components/analytics/AnalyticsKpiCard";
 import DrillDownBreadcrumb from "../../components/analytics/DrillDownBreadcrumb";
 import { useToast } from "../../context/ToastContext";
 import { getSalesAnalytics } from "../../api/analyticsApi";
-import { CHART_COLORS, DEMO_SALES, SOURCE_LINKS, formatInr } from "../../data/analyticsMasterData";
+import { CHART_COLORS, SOURCE_LINKS, formatInr } from "../../data/analyticsMasterData";
+import useManufacturingRefresh from "../../hooks/useManufacturingRefresh";
 
 const KPI_ICONS = {
   revenue: IndianRupee, orders: ShoppingCart, customers: Users, conversion: Percent,
   aov: Target, growth: TrendingUp, pending: BarChart3, dispatch: Truck,
 };
 
+const emptyData = {
+  kpis: [], alerts: [], monthly_revenue: [], top_customers: [],
+  top_products: [], regional_sales: [], sales_funnel: [],
+  quotation_conversion: [], order_status: [], drill_revenue: [],
+  last_updated: null,
+};
+
 export default function SalesAnalytics() {
   const { addToast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState([]);
+  const [data, setData] = useState(emptyData);
   const [autoRefresh, setAutoRefresh] = useState(false);
-  const [drillTrail, setDrillTrail] = useState(DEMO_SALES.drill_revenue || []);
+  const [drillTrail, setDrillTrail] = useState([]);
   const [filters, setFilters] = useState({
     fiscalYear: "2025-26", month: "All Months", quarter: "All Quarters",
     plant: "All Plants", customer: "All Customers", dateFrom: "", dateTo: "",
@@ -39,24 +47,30 @@ export default function SalesAnalytics() {
     try {
       const res = await getSalesAnalytics();
       if (res.data) {
-        setData({ ...DEMO_SALES, ...res.data });
-        setDrillTrail(res.data.drill_revenue .drill_revenue);
+        setData({ ...emptyData, ...res.data });
+        setDrillTrail(res.data.drill_revenue || []);
+      } else {
+        setData(emptyData);
+        setDrillTrail([]);
       }
     } catch {
-      setData(DEMO_SALES);
+      setData(emptyData);
+      setDrillTrail([]);
+      addToast("Failed to load sales analytics", "error");
     } finally {
       setLoading(false);
     }
   }, [addToast]);
 
   useEffect(() => { load(); }, [load]);
+  useManufacturingRefresh(load);
   useEffect(() => {
     if (!autoRefresh) return undefined;
     const t = setInterval(load, 60000);
     return () => clearInterval(t);
   }, [autoRefresh, load]);
 
-  if (loading && !data.kpis) return <Loader label="Loading sales analytics..." />;
+  if (loading && !data.kpis?.length) return <Loader label="Loading sales analytics..." />;
   const setF = (k) => (v) => setFilters((f) => ({ ...f, [k]: v }));
 
   const handleKpiClick = (kpi) => {
@@ -86,96 +100,75 @@ export default function SalesAnalytics() {
         customer={filters.customer} onCustomerChange={setF("customer")}
         dateFrom={filters.dateFrom} onDateFromChange={setF("dateFrom")}
         dateTo={filters.dateTo} onDateToChange={setF("dateTo")}
-        showAll={false}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {(data.kpis || []).map((kpi) => (
-          <AnalyticsKpiCard key={kpi.key} kpi={kpi} icon={KPI_ICONS[kpi.key]} onClick={handleKpiClick} />
+          <AnalyticsKpiCard key={kpi.key} kpi={kpi} icon={KPI_ICONS[kpi.key] || BarChart3} onClick={() => handleKpiClick(kpi)} />
         ))}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <AnalyticsChartCard id="chart-monthly-rev" title="Monthly Revenue" data={data.monthly_revenue} sourceLink={SOURCE_LINKS.sales} sourceLabel="Sales">
+        <AnalyticsChartCard id="chart-monthly-rev" title="Monthly Revenue" data={data.monthly_revenue} dataKeys={["label", "value"]} sourceLink={SOURCE_LINKS.sales} sourceLabel="Sales">
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={data.monthly_revenue}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="label" fontSize={11} />
-              <YAxis fontSize={11} tickFormatter={(v) => formatInr(v)} />
-              <Tooltip formatter={(v) => [formatInr(v), "Revenue"]} />
-              <Area type="monotone" dataKey="value" stroke={CHART_COLORS[0]} fill={CHART_COLORS[0]} fillOpacity={0.2} />
+              <XAxis dataKey="label" /><YAxis /><Tooltip formatter={(v) => formatInr(v)} />
+              <Area type="monotone" dataKey="value" stroke={CHART_COLORS[0]} fill={CHART_COLORS[0]} fillOpacity={0.2} name="Revenue" />
             </AreaChart>
           </ResponsiveContainer>
         </AnalyticsChartCard>
 
-        <AnalyticsChartCard id="chart-top-cust" title="Top Customers" data={data.top_customers} sourceLink={SOURCE_LINKS.sales} sourceLabel="Sales">
+        <AnalyticsChartCard id="chart-top-cust" title="Top Customers" data={data.top_customers} dataKeys={["label", "value"]} sourceLink={SOURCE_LINKS.sales} sourceLabel="Sales">
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={data.top_customers} layout="vertical">
+            <BarChart data={data.top_customers}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" tickFormatter={(v) => formatInr(v)} fontSize={10} />
-              <YAxis dataKey="label" type="category" width={100} fontSize={10} />
-              <Tooltip formatter={(v) => [formatInr(v), "Revenue"]} />
-              <Bar dataKey="value" fill={CHART_COLORS[1]} radius={[0, 4, 4, 0]} />
+              <XAxis dataKey="label" /><YAxis /><Tooltip />
+              <Bar dataKey="value" name="Orders" fill={CHART_COLORS[1]} />
             </BarChart>
           </ResponsiveContainer>
         </AnalyticsChartCard>
 
-        <AnalyticsChartCard id="chart-top-prod" title="Top Products" data={data.top_products} sourceLink={SOURCE_LINKS.sales} sourceLabel="Sales">
+        <AnalyticsChartCard id="chart-top-prod" title="Top Products" data={data.top_products} dataKeys={["label", "value"]} sourceLink={SOURCE_LINKS.sales} sourceLabel="Sales">
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={data.top_products}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="label" fontSize={10} />
-              <YAxis tickFormatter={(v) => formatInr(v)} fontSize={11} />
-              <Tooltip formatter={(v) => [formatInr(v), "Revenue"]} />
-              <Bar dataKey="value" fill={CHART_COLORS[2]} radius={[4, 4, 0, 0]} />
+              <XAxis dataKey="label" /><YAxis /><Tooltip />
+              <Bar dataKey="value" name="Qty" fill={CHART_COLORS[2]} />
             </BarChart>
           </ResponsiveContainer>
         </AnalyticsChartCard>
 
-        <AnalyticsChartCard id="chart-regional" title="Regional Sales" data={data.regional_sales} sourceLink={SOURCE_LINKS.sales} sourceLabel="Sales">
+        <AnalyticsChartCard id="chart-funnel" title="Sales Funnel" data={data.sales_funnel} dataKeys={["label", "value"]} sourceLink={SOURCE_LINKS.sales} sourceLabel="Sales">
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={data.sales_funnel} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis type="number" /><YAxis dataKey="label" type="category" width={100} /><Tooltip />
+              <Bar dataKey="value" fill={CHART_COLORS[3]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </AnalyticsChartCard>
+
+        <AnalyticsChartCard id="chart-order-status" title="Order Status" data={data.order_status} dataKeys={["label", "value"]} sourceLink={SOURCE_LINKS.sales} sourceLabel="Sales">
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
-              <Pie data={data.regional_sales} dataKey="value" nameKey="label" cx="50%" cy="50%" outerRadius={100} label={({ label, value }) => `${label} ${value}%`}>
-                {data.regional_sales.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+              <Pie data={data.order_status} dataKey="value" nameKey="label" cx="50%" cy="50%" outerRadius={100} label>
+                {(data.order_status || []).map((_, i) => (
+                  <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                ))}
               </Pie>
-              <Tooltip formatter={(v) => [`${v}%`, "Share"]} />
+              <Tooltip /><Legend />
             </PieChart>
           </ResponsiveContainer>
         </AnalyticsChartCard>
 
-        <AnalyticsChartCard id="chart-funnel" title="Sales Funnel" data={data.sales_funnel} sourceLink="/sales/leads" sourceLabel="Leads">
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={data.sales_funnel}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="label" fontSize={10} />
-              <YAxis fontSize={11} />
-              <Tooltip />
-              <Bar dataKey="value" fill={CHART_COLORS[3]} radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </AnalyticsChartCard>
-
-        <AnalyticsChartCard id="chart-quote-conv" title="Quotation Conversion" data={data.quotation_conversion} sourceLink="/sales/quotations" sourceLabel="Quotations">
+        <AnalyticsChartCard id="chart-quote-conv" title="Quotation Conversion" data={data.quotation_conversion} dataKeys={["label", "value"]} sourceLink={SOURCE_LINKS.sales} sourceLabel="Sales">
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={data.quotation_conversion}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="label" fontSize={11} />
-              <YAxis fontSize={11} domain={[0, 25]} />
-              <Tooltip formatter={(v) => [`${v}%`, "Conversion"]} />
-              <Line type="monotone" dataKey="value" stroke={CHART_COLORS[4]} strokeWidth={2} name="%" />
+              <XAxis dataKey="label" /><YAxis /><Tooltip />
+              <Line type="monotone" dataKey="value" stroke={CHART_COLORS[4]} name="Conversion %" />
             </LineChart>
-          </ResponsiveContainer>
-        </AnalyticsChartCard>
-
-        <AnalyticsChartCard id="chart-order-status" title="Order Status" data={data.order_status} sourceLink="/sales/orders" sourceLabel="Sales Orders">
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie data={data.order_status} dataKey="value" nameKey="label" cx="50%" cy="50%" innerRadius={50} outerRadius={90}>
-                {data.order_status.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-              </Pie>
-              <Tooltip />
-              <Legend />
-            </PieChart>
           </ResponsiveContainer>
         </AnalyticsChartCard>
       </div>

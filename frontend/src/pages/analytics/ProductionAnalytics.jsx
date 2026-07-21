@@ -16,7 +16,8 @@ import AnalyticsFilterBar from "../../components/analytics/AnalyticsFilterBar";
 import AnalyticsKpiCard from "../../components/analytics/AnalyticsKpiCard";
 import { useToast } from "../../context/ToastContext";
 import { getProductionAnalytics } from "../../api/analyticsApi";
-import { CHART_COLORS, DEMO_PRODUCTION, SOURCE_LINKS } from "../../data/analyticsMasterData";
+import { CHART_COLORS, SOURCE_LINKS } from "../../data/analyticsMasterData";
+import useManufacturingRefresh from "../../hooks/useManufacturingRefresh";
 
 const KPI_ICONS = {
   planned: Target, actual: Factory, efficiency: Gauge, oee: Activity,
@@ -25,11 +26,12 @@ const KPI_ICONS = {
 };
 
 const fmtTooltip = (v, name) => [Number(v).toLocaleString("en-IN"), name];
+const emptyData = { kpis: [], alerts: [], monthly_production: [], production_trend: [], daily_output: [], shift_wise: [], machine_wise: [], product_wise: [], operator_performance: [], downtime_analysis: [], benchmarks: [] };
 
 export default function ProductionAnalytics() {
   const { addToast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState(DEMO_PRODUCTION);
+  const [data, setData] = useState(emptyData);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [activeKpi, setActiveKpi] = useState(null);
   const [filters, setFilters] = useState({
@@ -43,15 +45,18 @@ export default function ProductionAnalytics() {
     setLoading(true);
     try {
       const res = await getProductionAnalytics();
-      if (res.data) setData({ ...DEMO_PRODUCTION, ...res.data });
+      if (res.data) setData({ ...emptyData, ...res.data });
+      else setData(emptyData);
     } catch {
-      setData(DEMO_PRODUCTION);
+      setData(emptyData);
+      addToast("Failed to load production analytics", "error");
     } finally {
       setLoading(false);
     }
   }, [addToast]);
 
   useEffect(() => { load(); }, [load]);
+  useManufacturingRefresh(load);
   useEffect(() => {
     if (!autoRefresh) return undefined;
     const t = setInterval(load, 60000);

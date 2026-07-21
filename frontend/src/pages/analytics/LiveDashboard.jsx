@@ -11,27 +11,44 @@ import AnalyticsDashboardHeader from "../../components/analytics/AnalyticsDashbo
 import AnalyticsKpiCard from "../../components/analytics/AnalyticsKpiCard";
 import { useToast } from "../../context/ToastContext";
 import { getLiveDashboard } from "../../api/analyticsApi";
-import { CHART_COLORS, DEMO_LIVE } from "../../data/analyticsMasterData";
+import { CHART_COLORS } from "../../data/analyticsMasterData";
+import useManufacturingRefresh from "../../hooks/useManufacturingRefresh";
+
+const emptyData = {
+  current_production: 0,
+  active_machines: 0,
+  total_machines: 0,
+  todays_orders: 0,
+  dispatches_today: 0,
+  breakdown_alerts: 0,
+  live_oee: 0,
+  alerts: [],
+  ai_insights: [],
+  production_pulse: [],
+};
 
 export default function LiveDashboard() {
   const { addToast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState(DEMO_LIVE);
+  const [data, setData] = useState(emptyData);
   const [autoRefresh, setAutoRefresh] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const res = await getLiveDashboard();
-      if (res.data) setData({ ...DEMO_LIVE, ...res.data });
+      if (res.data) setData({ ...emptyData, ...res.data });
+      else setData(emptyData);
     } catch {
-      setData(DEMO_LIVE);
+      setData(emptyData);
+      addToast("Failed to load live dashboard", "error");
     } finally {
       setLoading(false);
     }
   }, [addToast]);
 
   useEffect(() => { load(); }, [load]);
+  useManufacturingRefresh(load);
   useEffect(() => {
     if (!autoRefresh) return undefined;
     const t = setInterval(load, 30000);

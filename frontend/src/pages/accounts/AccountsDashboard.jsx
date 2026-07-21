@@ -8,9 +8,11 @@ import {
 } from "recharts";
 
 import Loader from "../../components/common/Loader";
+import ManufacturingWorkflowBar from "../../components/manufacturing/ManufacturingWorkflowBar";
 import { useToast } from "../../context/ToastContext";
 import { getFinanceHub } from "../../api/accountsApi";
 import { DEMO_FINANCE_HUB, FINANCE_FLOW, formatInr } from "../../data/financeMasterData";
+import useManufacturingRefresh from "../../hooks/useManufacturingRefresh";
 
 function KpiCard({ label, value, icon: Icon, color, sub }) {
   return (
@@ -39,13 +41,17 @@ export default function AccountsDashboard() {
     try {
       const res = await getFinanceHub();
       if (res.data) setHub({ ...DEMO_FINANCE_HUB, ...res.data });
+      else setHub(DEMO_FINANCE_HUB);
     } catch {
+      addToast("Failed to load finance hub", "error");
+      setHub(DEMO_FINANCE_HUB);
     } finally {
       setLoading(false);
     }
   }, [addToast]);
 
   useEffect(() => { load(); }, [load]);
+  useManufacturingRefresh(load);
 
   if (loading) return <Loader label="Loading finance dashboard..." />;
 
@@ -58,6 +64,8 @@ export default function AccountsDashboard() {
         </div>
         <button type="button" onClick={load} className="inline-flex items-center gap-2 rounded-lg border bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"><RefreshCw className="h-4 w-4" /> Refresh</button>
       </header>
+
+      <ManufacturingWorkflowBar currentStepId="invoice" />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <KpiCard label="Total Receivables" value={formatInr(hub.total_receivables)} icon={ArrowUpRight} color="bg-blue-600" />

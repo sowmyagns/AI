@@ -15,7 +15,8 @@ import AnalyticsFilterBar from "../../components/analytics/AnalyticsFilterBar";
 import AnalyticsKpiCard from "../../components/analytics/AnalyticsKpiCard";
 import { useToast } from "../../context/ToastContext";
 import { getInventoryAnalytics } from "../../api/analyticsApi";
-import { CHART_COLORS, DEMO_INVENTORY, SOURCE_LINKS, formatInr } from "../../data/analyticsMasterData";
+import { CHART_COLORS, SOURCE_LINKS, formatInr } from "../../data/analyticsMasterData";
+import useManufacturingRefresh from "../../hooks/useManufacturingRefresh";
 
 const KPI_ICONS = {
   turnover: TrendingUp, outflow: Package, avg_inv: Box, value: IndianRupee,
@@ -23,10 +24,12 @@ const KPI_ICONS = {
   accuracy: Percent, warehouse: Warehouse,
 };
 
+const emptyData = { kpis: [], alerts: [], stock_in_vs_out: [], warehouse_occupancy: [], abc_analysis: [], inventory_aging: [], monthly_consumption: [], value_trend: [], fast_moving: [], slow_moving: [], dead_stock: [], reorder_alerts: [] };
+
 export default function InventoryAnalytics() {
   const { addToast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState(DEMO_INVENTORY);
+  const [data, setData] = useState(emptyData);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [filters, setFilters] = useState({
     fiscalYear: "2025-26", month: "All Months", quarter: "All Quarters",
@@ -39,15 +42,18 @@ export default function InventoryAnalytics() {
     setLoading(true);
     try {
       const res = await getInventoryAnalytics();
-      if (res.data) setData({ ...DEMO_INVENTORY, ...res.data });
+      if (res.data) setData({ ...emptyData, ...res.data });
+      else setData(emptyData);
     } catch {
-      setData(DEMO_INVENTORY);
+      setData(emptyData);
+      addToast("Failed to load inventory analytics", "error");
     } finally {
       setLoading(false);
     }
   }, [addToast]);
 
   useEffect(() => { load(); }, [load]);
+  useManufacturingRefresh(load);
   useEffect(() => {
     if (!autoRefresh) return undefined;
     const t = setInterval(load, 60000);

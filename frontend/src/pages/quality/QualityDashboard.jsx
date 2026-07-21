@@ -10,7 +10,9 @@ import {
 import Loader from "../../components/common/Loader";
 import { useToast } from "../../context/ToastContext";
 import { getQualityHub } from "../../api/qualityApi";
-import { DEMO_QUALITY_HUB, QUALITY_FLOW, formatPct, qcStatusColor } from "../../data/qualityMasterData";
+import { QUALITY_FLOW, formatPct, qcStatusColor } from "../../data/qualityMasterData";
+import useManufacturingRefresh from "../../hooks/useManufacturingRefresh";
+import ManufacturingWorkflowBar from "../../components/manufacturing/ManufacturingWorkflowBar";
 
 const PIE_COLORS = ["#22c55e", "#ef4444", "#f59e0b"];
 
@@ -30,20 +32,24 @@ const alertIcons = { pending: ClipboardCheck, defect: AlertTriangle, yield: Tren
 export default function QualityDashboard() {
   const { addToast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [hub, setHub] = useState(DEMO_QUALITY_HUB);
+  const [hub, setHub] = useState({});
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const res = await getQualityHub();
-      if (res.data) setHub({ ...DEMO_QUALITY_HUB, ...res.data });
+      if (res.data) setHub(res.data);
+      else setHub({});
     } catch {
+      addToast("Failed to load quality hub", "error");
+      setHub({});
     } finally {
       setLoading(false);
     }
   }, [addToast]);
 
   useEffect(() => { load(); }, [load]);
+  useManufacturingRefresh(load);
 
   if (loading) return <Loader label="Loading quality dashboard..." />;
 
@@ -56,6 +62,8 @@ export default function QualityDashboard() {
         </div>
         <button type="button" onClick={load} className="inline-flex items-center gap-2 rounded-lg border bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"><RefreshCw className="h-4 w-4" /> Refresh</button>
       </header>
+
+      <ManufacturingWorkflowBar currentStepId="quality" />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <KpiCard label="Total Inspections" value={hub.total_inspections} icon={ClipboardCheck} color="bg-blue-600" />

@@ -16,11 +16,12 @@ import ProductionManagerNav from "../../components/production/ProductionManagerN
 import { useToast } from "../../context/ToastContext";
 import { getProductionHub } from "../../api/productionApi";
 import {
-  DEMO_HUB,
   HUB_FLOW,
   HUB_MODULES,
   hubStatusColor,
 } from "../../data/productionHubMasterData";
+import useManufacturingRefresh from "../../hooks/useManufacturingRefresh";
+import ManufacturingWorkflowBar from "../../components/manufacturing/ManufacturingWorkflowBar";
 
 function StatusPanel({ title, items, icon: Icon }) {
   return (
@@ -56,20 +57,24 @@ function ModuleCard({ label, to, color }) {
 export default function ProductionDashboard() {
   const { addToast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [hub, setHub] = useState(DEMO_HUB);
+  const [hub, setHub] = useState({});
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const res = await getProductionHub();
-      if (res?.data) setHub({ ...DEMO_HUB, ...res.data });
+      if (res?.data) setHub(res.data);
+      else setHub({});
     } catch {
+      addToast("Failed to load production hub", "error");
+      setHub({});
     } finally {
       setLoading(false);
     }
   }, [addToast]);
 
   useEffect(() => { load(); }, [load]);
+  useManufacturingRefresh(load);
 
   if (loading) return <Loader label="Loading production hub..." />;
 
@@ -88,6 +93,8 @@ export default function ProductionDashboard() {
           <RefreshCw className="h-4 w-4" /> Refresh
         </button>
       </header>
+
+      <ManufacturingWorkflowBar currentStepId="production" />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-[#2563EB] to-indigo-600 p-5 text-white shadow-sm">
