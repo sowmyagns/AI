@@ -1,11 +1,14 @@
 import { useEffect, useState, useCallback } from "react";
-import { Plus, RefreshCw, Layers, Calculator, ShieldAlert, Award, FileText } from "lucide-react";
+import { Plus, RefreshCw, Layers, Calculator, ShieldAlert, Award, FileText, X } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import FinanceFilters from "../../components/finance/FinanceFilters";
 import Loader from "../../components/common/Loader";
 import { useToast } from "../../context/ToastContext";
 import { getExtendedReports, createFixedAsset } from "../../api/accountsApi";
 import { formatInr } from "../../data/financeMasterData";
+
+const inputClass =
+  "mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all";
 
 export default function FixedAssets() {
   const { addToast } = useToast();
@@ -193,89 +196,101 @@ export default function FixedAssets() {
 
       {/* Register Asset Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-xl space-y-4">
-            <h2 className="text-lg font-bold text-slate-900 border-b pb-2">Register Fixed Asset</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 max-w-lg w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Register Fixed Asset</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Capitalize capital assets, plant machinery, and office property.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalOpen(false)}
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
             
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Asset Code</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Asset Code *</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. FA-004"
                     value={newAsset.code}
                     onChange={(e) => setNewAsset((prev) => ({ ...prev, code: e.target.value }))}
-                    className="w-full rounded-xl border border-slate-200 p-2.5 text-sm"
+                    className={inputClass}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Purchase Date</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Purchase Date *</label>
                   <input
                     type="date"
                     required
                     value={newAsset.purchaseDate}
                     onChange={(e) => setNewAsset((prev) => ({ ...prev, purchaseDate: e.target.value }))}
-                    className="w-full rounded-xl border border-slate-200 p-2.5 text-sm"
+                    className={inputClass}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Asset Description / Name</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Asset Description / Name *</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Laser engraving machine"
                   value={newAsset.name}
                   onChange={(e) => setNewAsset((prev) => ({ ...prev, name: e.target.value }))}
-                  className="w-full rounded-xl border border-slate-200 p-2.5 text-sm"
+                  className={inputClass}
                 />
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-3">
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Capital Cost (₹)</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Capital Cost (₹) *</label>
                   <input
                     type="number"
                     required
                     placeholder="450000"
                     value={newAsset.cost}
                     onChange={(e) => setNewAsset((prev) => ({ ...prev, cost: e.target.value }))}
-                    className="w-full rounded-xl border border-slate-200 p-2.5 text-sm text-right"
+                    className={`${inputClass} text-right`}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Salvage Value (₹)</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Salvage Value (₹) *</label>
                   <input
                     type="number"
                     required
                     placeholder="50000"
                     value={newAsset.salvage}
                     onChange={(e) => setNewAsset((prev) => ({ ...prev, salvage: e.target.value }))}
-                    className="w-full rounded-xl border border-slate-200 p-2.5 text-sm text-right"
+                    className={`${inputClass} text-right`}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Useful Life (Yrs)</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Useful Life (Yrs) *</label>
                   <input
                     type="number"
                     required
                     placeholder="10"
                     value={newAsset.life}
                     onChange={(e) => setNewAsset((prev) => ({ ...prev, life: e.target.value }))}
-                    className="w-full rounded-xl border border-slate-200 p-2.5 text-sm text-center"
+                    className={`${inputClass} text-center`}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Depreciation Method</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Depreciation Method</label>
                 <select
                   value={newAsset.method}
                   onChange={(e) => setNewAsset((prev) => ({ ...prev, method: e.target.value }))}
-                  className="w-full rounded-xl border border-slate-200 p-2.5 text-sm"
+                  className={inputClass}
                 >
                   <option value="Straight Line">Straight Line</option>
                   <option value="WDV (15%)">WDV (15%)</option>
@@ -283,17 +298,17 @@ export default function FixedAssets() {
                 </select>
               </div>
 
-              <div className="flex justify-end gap-2 border-t pt-3">
+              <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-[#2563EB] hover:bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#2563EB] px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 shadow-sm transition-all"
                 >
                   Capitalize Asset
                 </button>

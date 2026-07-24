@@ -1,10 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Search, Layers, Shield, RefreshCw } from "lucide-react";
+import { Plus, Search, Layers, Shield, RefreshCw, X } from "lucide-react";
 import FinanceFilters from "../../components/finance/FinanceFilters";
 import Loader from "../../components/common/Loader";
 import { useToast } from "../../context/ToastContext";
 import { getExtendedReports, createGLAccount } from "../../api/accountsApi";
 import { formatInr } from "../../data/financeMasterData";
+
+const inputClass =
+  "mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all";
 
 export default function ChartOfAccounts() {
   const { addToast } = useToast();
@@ -179,29 +182,41 @@ export default function ChartOfAccounts() {
 
       {/* Add Account Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-xl space-y-4">
-            <h2 className="text-lg font-bold text-slate-900 border-b pb-2">Add New GL Account</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 max-w-lg w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Add New GL Account</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Define a General Ledger account entry in the chart of accounts.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalOpen(false)}
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
             
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Account Code</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Account Code *</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. 1005"
                     value={newAcc.code}
                     onChange={(e) => setNewAcc((prev) => ({ ...prev, code: e.target.value }))}
-                    className="w-full rounded-xl border border-slate-200 p-2.5 text-sm"
+                    className={inputClass}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Account Class</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Account Class</label>
                   <select
                     value={newAcc.type}
                     onChange={(e) => setNewAcc((prev) => ({ ...prev, type: e.target.value }))}
-                    className="w-full rounded-xl border border-slate-200 p-2.5 text-sm"
+                    className={inputClass}
                   >
                     {tabs.map((tab) => <option key={tab} value={tab}>{tab}</option>)}
                   </select>
@@ -209,52 +224,52 @@ export default function ChartOfAccounts() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Account Title</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Account Title *</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Petty Cash Account"
                   value={newAcc.name}
                   onChange={(e) => setNewAcc((prev) => ({ ...prev, name: e.target.value }))}
-                  className="w-full rounded-xl border border-slate-200 p-2.5 text-sm"
+                  className={inputClass}
                 />
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Parent Group</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Parent Group *</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. Current Assets"
                     value={newAcc.parent}
                     onChange={(e) => setNewAcc((prev) => ({ ...prev, parent: e.target.value }))}
-                    className="w-full rounded-xl border border-slate-200 p-2.5 text-sm"
+                    className={inputClass}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Opening Balance</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Opening Balance (₹)</label>
                   <input
                     type="number"
                     placeholder="0"
                     value={newAcc.balance || ""}
                     onChange={(e) => setNewAcc((prev) => ({ ...prev, balance: e.target.value }))}
-                    className="w-full rounded-xl border border-slate-200 p-2.5 text-sm text-right"
+                    className={`${inputClass} text-right`}
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 border-t pt-3">
+              <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-[#2563EB] hover:bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#2563EB] px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 shadow-sm transition-all"
                 >
                   Save Account
                 </button>

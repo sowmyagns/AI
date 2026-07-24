@@ -4,6 +4,7 @@ import { Filter, LayoutGrid, List, Plus, RefreshCw, Target, TrendingUp, UserPlus
 import DataTable from "../../components/common/DataTable";
 import Loader from "../../components/common/Loader";
 import LeadDetailModal from "../../components/sales/LeadDetailModal";
+import CreateLeadModal from "../../components/sales/CreateLeadModal";
 import { useToast } from "../../context/ToastContext";
 import { getLeadSummary, getLeadsEnriched, updateLeadStatus } from "../../api/salesApi";
 import {
@@ -37,27 +38,56 @@ const defaultFilters = { sales_executive: "", source: "", industry: "", region: 
 export default function Leads() {
   const { addToast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [summary, setSummary] = useState(DEMO_LEAD_SUMMARY);
   const [rows, setRows] = useState([]);
   const [filters, setFilters] = useState(defaultFilters);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [view, setView] = useState("table");
   const [selected, setSelected] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const [sumRes, listRes] = await Promise.allSettled([getLeadSummary(), getLeadsEnriched()]);
-      if (sumRes.status === "fulfilled" && sumRes.value?.data) setSummary({ ...DEMO_LEAD_SUMMARY, ...sumRes.value.data });
-      if (listRes.status === "fulfilled" && listRes.value?.data?.length) setRows(listRes.value.data);
-      else setRows([]);
+      const stored = localStorage.getItem("smrt_leads");
+      const localLeads = stored ? JSON.parse(stored) : [];
+      let baseLeads = DEMO_LEAD_LIST;
+      if (listRes.status === "fulfilled" && listRes.value?.data?.length) {
+        baseLeads = listRes.value.data;
+      }
+      setRows([...localLeads, ...baseLeads]);
     } catch {
+      const stored = localStorage.getItem("smrt_leads");
+      const localLeads = stored ? JSON.parse(stored) : [];
+      setRows([...localLeads, ...DEMO_LEAD_LIST]);
     } finally {
       setLoading(false);
     }
   }, [addToast]);
 
   useEffect(() => { load(); }, [load]);
+
+  const summary = useMemo(() => {
+    const total_leads = rows.length;
+    const new_leads = rows.filter((r) => String(r.status || "").toLowerCase() === "new").length;
+    const qualified_leads = rows.filter((r) =>
+      ["qualified", "proposal", "negotiation"].includes(String(r.status || "").toLowerCase())
+    ).length;
+    const won_customers = rows.filter((r) =>
+      ["won", "converted"].includes(String(r.status || "").toLowerCase())
+    ).length;
+    const lost_leads = rows.filter((r) => String(r.status || "").toLowerCase() === "lost").length;
+    const conversion_rate = total_leads > 0 ? ((won_customers / total_leads) * 100).toFixed(1) : 0;
+
+    return {
+      total_leads,
+      new_leads,
+      qualified_leads,
+      won_customers,
+      lost_leads,
+      conversion_rate,
+    };
+  }, [rows]);
 
   const filtered = useMemo(() => {
     let list = rows;
@@ -73,14 +103,21 @@ export default function Leads() {
       try {
         await updateLeadStatus(lead.id, status);
         addToast("Lead updated");
-        load();
       } catch (err) {
         addToast(err.response?.data?.detail || "Update failed", "error");
-        return;
       }
     } else {
-      addToast(`Lead marked as ${status} (demo)`);
+      addToast(`Lead status updated to ${status}`);
     }
+
+    // Update local state & localStorage so KPI cards update immediately
+    const stored = localStorage.getItem("smrt_leads");
+    if (stored) {
+      const localLeads = JSON.parse(stored);
+      const updatedLocal = localLeads.map((l) => (l.lead_id === lead.lead_id ? { ...l, status } : l));
+      localStorage.setItem("smrt_leads", JSON.stringify(updatedLocal));
+    }
+    setRows((prev) => prev.map((l) => (l.lead_id === lead.lead_id ? { ...l, status } : l)));
     setSelected(null);
   };
 
@@ -109,7 +146,13 @@ export default function Leads() {
           <p className="mt-1 text-sm text-slate-500">Enterprise CRM pipeline with Kanban view, 360° lead profile, and opportunity tracking.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button type="button" className="ui-btn-primary"><Plus className="h-4 w-4" /> New Lead</button>
+          <button
+            type="button"
+            onClick={() => setShowCreateModal(true)}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-[#2563EB] px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 shadow-sm transition-all"
+          >
+            <Plus className="h-4 w-4" /> New Lead
+          </button>
           <button type="button" onClick={load} className="inline-flex items-center gap-2 rounded-lg border bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"><RefreshCw className="h-4 w-4" /> Refresh</button>
         </div>
       </header>
@@ -190,6 +233,7 @@ export default function Leads() {
       </div>
 
       {selected && <LeadDetailModal lead={selected} onClose={() => setSelected(null)} onStatusChange={handleStatus} />}
+      <CreateLeadModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} onSuccess={load} />
     </div>
   );
 }

@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, Banknote, CreditCard, IndianRupee, RefreshCw, Smartphone, XCircle } from "lucide-react";
+import { AlertTriangle, Banknote, CreditCard, IndianRupee, Plus, RefreshCw, Smartphone, XCircle } from "lucide-react";
 
 import DataTable from "../../components/common/DataTable";
 import FinanceFilters from "../../components/finance/FinanceFilters";
 import Loader from "../../components/common/Loader";
+import RecordPaymentModal from "../../components/finance/RecordPaymentModal";
 import { useToast } from "../../context/ToastContext";
 import { getPaymentSummary, getPaymentsEnriched } from "../../api/accountsApi";
 import { DEMO_PAY_LIST, DEMO_PAY_SUMMARY, formatInr, statusColor } from "../../data/financeMasterData";
@@ -29,14 +30,20 @@ export default function PaymentTracking() {
   const [financialYear, setFinancialYear] = useState("2025-26");
   const [month, setMonth] = useState("All Months");
   const [branch, setBranch] = useState("");
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const [sumRes, listRes] = await Promise.allSettled([getPaymentSummary(), getPaymentsEnriched()]);
       if (sumRes.status === "fulfilled" && sumRes.value?.data) setSummary({ ...DEMO_PAY_SUMMARY, ...sumRes.value.data });
-      if (listRes.status === "fulfilled" && listRes.value?.data?.length) setRows(listRes.value.data);
-      else setRows([]);
+      const stored = localStorage.getItem("smrt_payments");
+      const localPayments = stored ? JSON.parse(stored) : [];
+      if (listRes.status === "fulfilled" && listRes.value?.data?.length) {
+        setRows([...localPayments, ...listRes.value.data]);
+      } else {
+        setRows([...localPayments]);
+      }
     } catch {
     } finally {
       setLoading(false);
@@ -81,7 +88,13 @@ export default function PaymentTracking() {
           <p className="mt-1 text-sm text-slate-500">Customer receipts and vendor payments — UPI, NEFT, RTGS, cash, and bank transfers.</p>
         </div>
         <div className="flex gap-2">
-          <Link to="/sales/payments/create" className="inline-flex items-center rounded-lg bg-[#2563EB] px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">+ Record Payment</Link>
+          <button
+            type="button"
+            onClick={() => setShowPaymentModal(true)}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-[#2563EB] px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 shadow-sm transition-all"
+          >
+            <Plus className="h-4 w-4" /> Record Payment
+          </button>
           <button type="button" onClick={load} className="inline-flex items-center gap-2 rounded-lg border bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"><RefreshCw className="h-4 w-4" /> Refresh</button>
         </div>
       </header>
@@ -110,6 +123,12 @@ export default function PaymentTracking() {
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <DataTable columns={columns} data={filtered} searchPlaceholder="" searchKeys={[]} />
       </div>
+
+      <RecordPaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        onSuccess={load}
+      />
     </div>
   );
 }

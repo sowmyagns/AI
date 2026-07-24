@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { IndianRupee, RefreshCw, TrendingDown, Users, Wallet } from "lucide-react";
+import { IndianRupee, Plus, RefreshCw, TrendingDown, Users, Wallet } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 import DataTable from "../../components/common/DataTable";
 import FinanceFilters from "../../components/finance/FinanceFilters";
 import Loader from "../../components/common/Loader";
+import RecordPaymentModal from "../../components/finance/RecordPaymentModal";
 import { useToast } from "../../context/ToastContext";
 import { getAREnriched, getARSummary } from "../../api/accountsApi";
 import { DEMO_AR_LIST, DEMO_AR_SUMMARY, formatInr, statusColor, agingColor } from "../../data/financeMasterData";
@@ -29,6 +30,7 @@ export default function AccountsReceivable() {
   const [financialYear, setFinancialYear] = useState("2025-26");
   const [month, setMonth] = useState("All Months");
   const [branch, setBranch] = useState("");
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -71,6 +73,19 @@ export default function AccountsReceivable() {
     { key: "days_overdue", label: "Days Overdue" },
     { key: "aging_bucket", label: "Aging", render: (r) => <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${agingColor(r.aging_bucket)}`}>{r.aging_bucket} days</span> },
     { key: "status", label: "Status", render: (r) => <span className={`rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${statusColor(r.status)}`}>{r.status}</span> },
+    {
+      key: "actions",
+      label: "Actions",
+      render: () => (
+        <button
+          type="button"
+          onClick={() => setShowPaymentModal(true)}
+          className="text-xs font-semibold text-[#2563EB] hover:underline"
+        >
+          Record Collection
+        </button>
+      ),
+    },
   ];
 
   if (loading) return <Loader label="Loading accounts receivable..." />;
@@ -82,7 +97,16 @@ export default function AccountsReceivable() {
           <h1 className="text-2xl font-bold text-slate-900">Accounts Receivable</h1>
           <p className="mt-1 text-sm text-slate-500">Customer invoices, collections, and aging analysis for finance team.</p>
         </div>
-        <button type="button" onClick={load} className="inline-flex items-center gap-2 rounded-lg border bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"><RefreshCw className="h-4 w-4" /> Refresh</button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setShowPaymentModal(true)}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-[#2563EB] px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 shadow-sm transition-all"
+          >
+            <Plus className="h-4 w-4" /> Record Collection
+          </button>
+          <button type="button" onClick={load} className="inline-flex items-center gap-2 rounded-lg border bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"><RefreshCw className="h-4 w-4" /> Refresh</button>
+        </div>
       </header>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
@@ -132,6 +156,13 @@ export default function AccountsReceivable() {
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <DataTable columns={columns} data={filtered} searchPlaceholder="" searchKeys={[]} />
       </div>
+
+      <RecordPaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        initialPartyType="Customer"
+        onSuccess={load}
+      />
     </div>
   );
 }

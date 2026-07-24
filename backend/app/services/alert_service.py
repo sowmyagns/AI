@@ -20,8 +20,7 @@ def create_alert(db: Session, payload: AlertCreate) -> Alert:
     a = Alert(**data)
     db.add(a)
     db.flush()
-    if fanout:
-        fanout_alert_notifications(db, a)
+    fanout_alert_notifications(db, a)
     db.commit()
     db.refresh(a)
     return a
@@ -135,6 +134,25 @@ def delete_alert(db: Session, alert_id: int, tenant_id: int) -> bool:
     db.delete(alert)
     db.commit()
     return True
+
+
+def mark_alert_read(db: Session, alert_id: int, tenant_id: int) -> Alert | None:
+    alert = get_alert(db, alert_id, tenant_id)
+    if not alert:
+        return None
+    alert.is_read = True
+    db.commit()
+    db.refresh(alert)
+    return alert
+
+
+def mark_all_alerts_read(db: Session, tenant_id: int, user: User | None = None) -> int:
+    stmt = select(Alert).where(Alert.tenant_id == tenant_id, Alert.is_read.is_(False))
+    alerts = list(db.scalars(stmt).all())
+    for a in alerts:
+        a.is_read = True
+    db.commit()
+    return len(alerts)
 
 
 def sync_low_stock_alerts(db: Session, tenant_id: int) -> list[Alert]:

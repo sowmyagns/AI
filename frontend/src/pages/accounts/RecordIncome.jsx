@@ -1,13 +1,17 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { X, Save } from "lucide-react";
 import { createIncome } from "../../api/accountsApi";
+import { useToast } from "../../context/ToastContext";
 import useTenantId from "../../hooks/useTenantId";
 
+const inputClass =
+  "mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all";
 
-
-export default function RecordIncome() {
+export default function RecordIncome({ onClose }) {
   const tenantId = useTenantId();
   const navigate = useNavigate();
+  const { addToast } = useToast();
   const [form, setForm] = useState({
     tenant_id: tenantId,
     category: "",
@@ -18,35 +22,121 @@ export default function RecordIncome() {
   });
   const [saving, setSaving] = useState(false);
 
+  const handleClose = () => {
+    if (onClose) onClose();
+    else navigate(-1);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
     try {
       await createIncome({ ...form, amount: Number(form.amount) });
-      navigate("/accounts/profit-loss");
+      if (addToast) addToast("Income recorded successfully", "success");
+      handleClose();
     } catch (err) {
-      console.error(err);
+      if (addToast) addToast("Failed to record income", "error");
     } finally {
       setSaving(false);
     }
   };
 
-  const inputStyle = { width: "100%", padding: "8px 12px", marginTop: 6, border: "1px solid #d1d5db", borderRadius: 6 };
-
   return (
-    <div style={{ maxWidth: 500 }}>
-      <h2>Record Income</h2>
-      <form onSubmit={handleSubmit} style={{ display: "grid", gap: 14, marginTop: 16 }}>
-        <label>Category * <input type="text" value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} required placeholder="e.g. Website Sales" style={inputStyle} /></label>
-        <label>Source (Customer/Vendor) <input type="text" value={form.source} onChange={(e) => setForm((f) => ({ ...f, source: e.target.value }))} placeholder="e.g. ABC Company" style={inputStyle} /></label>
-        <label>Amount * <input type="number" step="0.01" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} required style={inputStyle} /></label>
-        <label>Date * <input type="date" value={form.income_date} onChange={(e) => setForm((f) => ({ ...f, income_date: e.target.value }))} required style={inputStyle} /></label>
-        <label>Description <textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={3} style={inputStyle} /></label>
-        <div style={{ display: "flex", gap: 12 }}>
-          <button type="submit" disabled={saving} style={{ padding: "10px 20px", background: "#22c55e", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600 }}>Save</button>
-          <button type="button" onClick={() => navigate("/accounts/profit-loss")} style={{ padding: "10px 20px", background: "#e5e7eb", color: "#374151", border: "none", borderRadius: 6, cursor: "pointer" }}>Cancel</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl border border-slate-200 max-w-lg w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-start justify-between border-b border-slate-100 pb-3">
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">Record Income</h3>
+            <p className="text-xs text-slate-500 mt-0.5">Post an income voucher / receipt to the ledger.</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleClose}
+            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
-      </form>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Category *</label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Sales Revenue / Interest"
+                value={form.category}
+                onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Source</label>
+              <input
+                type="text"
+                placeholder="e.g. Customer / Client Name"
+                value={form.source}
+                onChange={(e) => setForm((f) => ({ ...f, source: e.target.value }))}
+                className={inputClass}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Amount (₹) *</label>
+              <input
+                type="number"
+                step="0.01"
+                required
+                placeholder="0.00"
+                value={form.amount}
+                onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
+                className={`${inputClass} text-right`}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Income Date *</label>
+              <input
+                type="date"
+                required
+                value={form.income_date}
+                onChange={(e) => setForm((f) => ({ ...f, income_date: e.target.value }))}
+                className={inputClass}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Description</label>
+            <textarea
+              value={form.description}
+              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              rows={3}
+              placeholder="Describe the source and details of this income..."
+              className={inputClass}
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 shadow-sm transition-all disabled:opacity-50"
+            >
+              <Save className="h-4 w-4" /> Save Income
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
