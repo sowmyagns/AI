@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class TaskBase(BaseModel):
-    tenant_id: int
+    tenant_id: int | None = None
     title: str = Field(..., min_length=1, max_length=255)
     description: str | None = None
     assigned_to: int | None = None

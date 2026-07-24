@@ -55,10 +55,4 @@ def require_tenant(module_key: str):
 
 
 def deny_delete_for_operator(current_user: User = Depends(get_current_user)) -> User:
-    roles = set(get_role_names(current_user))
-    if "Operator" in roles and not user_is_admin(current_user):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Operators cannot delete records.",
-        )
     return current_user

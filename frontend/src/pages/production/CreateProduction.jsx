@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import ManufacturingWorkflowBar from "../../components/manufacturing/ManufacturingWorkflowBar";
-import { createProductionOrder, getProducts, seedProducts } from "../../api/productionApi";
+import { createProductionOrder, getProducts } from "../../api/productionApi";
 import useTenantId from "../../hooks/useTenantId";
 
 export default function CreateProduction() {
@@ -18,7 +18,6 @@ export default function CreateProduction() {
 
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
-  const [seeding, setSeeding] = useState(false);
   const [form, setForm] = useState({
     tenant_id: tenantId,
     product_id: prefilledProductId,
@@ -37,16 +36,6 @@ export default function CreateProduction() {
   const loadProducts = () => {
     setLoadingProducts(true);
     getProducts(tenantId)
-      .then((r) => {
-        const list = r.data || [];
-        if (list.length === 0) {
-          setSeeding(true);
-          return seedProducts()
-            .then(() => getProducts(tenantId))
-            .finally(() => setSeeding(false));
-        }
-        return { data: list };
-      })
       .then((r) => setProducts(r?.data || []))
       .catch(() => setProducts([]))
       .finally(() => setLoadingProducts(false));
@@ -161,16 +150,8 @@ export default function CreateProduction() {
             ))}
           </select>
           {products.length === 0 && !loadingProducts && (
-            <div className="mt-2 flex items-center gap-2">
-              <p className="text-xs text-amber-600">{t("createProduction.noProducts")}</p>
-              <button
-                type="button"
-                onClick={loadProducts}
-                disabled={seeding}
-                className="text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50"
-              >
-                {seeding ? t("createProduction.loading") : t("createProduction.loadSampleProducts")}
-              </button>
+            <div className="mt-2">
+              <p className="text-xs text-amber-600">No products found. Please add products first via Masters → Products.</p>
             </div>
           )}
         </div>

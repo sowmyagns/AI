@@ -247,6 +247,17 @@ def on_startup():
                 conn.execute(text(ddl))
         except Exception:
             pass
+    _product_columns = [
+        "ALTER TABLE products ADD COLUMN min_stock INTEGER NOT NULL DEFAULT 1",
+        "ALTER TABLE products ADD COLUMN max_stock INTEGER NOT NULL DEFAULT 100",
+        "ALTER TABLE products ADD COLUMN current_stock INTEGER NOT NULL DEFAULT 1",
+    ]
+    for ddl in _product_columns:
+        try:
+            with engine.begin() as conn:
+                conn.execute(text(ddl))
+        except Exception:
+            pass
     _access_log_columns = [
         "ALTER TABLE access_logs ADD COLUMN company_id INTEGER",
         "ALTER TABLE access_logs ADD COLUMN company_name VARCHAR(255)",
@@ -342,6 +353,11 @@ def on_startup():
         "ALTER TABLE otp_challenges ADD COLUMN invalidated BOOLEAN DEFAULT 0",
         "ALTER TABLE otp_challenges ADD COLUMN purpose VARCHAR(32) DEFAULT 'super_admin_login'",
         "ALTER TABLE otp_challenges ADD COLUMN last_sent_at DATETIME",
+        "ALTER TABLE alerts ADD COLUMN assigned_to VARCHAR(255)",
+        "ALTER TABLE alerts ADD COLUMN acknowledged_by VARCHAR(255)",
+        "ALTER TABLE alerts ADD COLUMN acknowledged_at DATETIME",
+        "ALTER TABLE alerts ADD COLUMN reference_type VARCHAR(64)",
+        "ALTER TABLE alerts ADD COLUMN reference_id INTEGER",
         "ALTER TABLE alerts ADD COLUMN module VARCHAR(64)",
         "ALTER TABLE alerts ADD COLUMN link VARCHAR(512)",
         "ALTER TABLE alerts ADD COLUMN target_role VARCHAR(255)",
@@ -355,12 +371,30 @@ def on_startup():
                 conn.execute(text(ddl))
         except Exception:
             pass
+    _document_columns = [
+        "ALTER TABLE documents ADD COLUMN file_name VARCHAR(255)",
+        "ALTER TABLE documents ADD COLUMN file_size INTEGER DEFAULT 0",
+        "ALTER TABLE documents ADD COLUMN reference_type VARCHAR(64)",
+        "ALTER TABLE documents ADD COLUMN reference_id INTEGER",
+        "ALTER TABLE documents ADD COLUMN department VARCHAR(128) DEFAULT 'Procurement'",
+        "ALTER TABLE documents ADD COLUMN version VARCHAR(32) DEFAULT 'v1.0'",
+        "ALTER TABLE documents ADD COLUMN description TEXT",
+        "ALTER TABLE documents ADD COLUMN uploaded_by VARCHAR(255)",
+    ]
+    for ddl in _document_columns:
+        try:
+            with engine.begin() as conn:
+                conn.execute(text(ddl))
+        except Exception:
+            pass
     try:
         with engine.begin() as conn:
             conn.execute(text("UPDATE users SET email_verified = 1 WHERE email_verified = 0"))
     except Exception:
         pass
     from app.core.database import SessionLocal
+    from app.core.seed_dashboard import seed_dashboard_data
+    from app.core.seed_hr import seed_hr_data
     from app.core.seed_notifications import seed_notifications
     from app.core.seed_products import seed_products
     from app.core.seed_roles import seed_roles
@@ -374,6 +408,8 @@ def on_startup():
         seed_roles(db)  # Seeds default roles for tenant 1
         seed_products(db)  # Seeds sample products for tenant 1
         seed_notifications(db)  # Demo bell notifications per user
+        seed_hr_data(db)  # Seeds sample employees, shifts & attendance
+        seed_dashboard_data(db)  # Seeds machines & 7-day production reports
     except Exception:
         logger.exception("Seed warning during startup")
     finally:
@@ -407,6 +443,7 @@ app.include_router(analytics_router)
 app.include_router(hr_router)
 app.include_router(inventory_router)
 app.include_router(alerts_router)
+app.include_router(alerts_router, prefix="/api")
 app.include_router(admin_router)
 app.include_router(company_settings_router)
 app.include_router(documents_router)
@@ -419,5 +456,6 @@ app.include_router(iot_router)
 app.include_router(production_scheduling_router)
 app.include_router(supply_chain_router)
 app.include_router(task_management_router)
+app.include_router(task_management_router, prefix="/api")
 app.include_router(audit_logs_router)
 app.include_router(warehouse_router)

@@ -55,12 +55,12 @@ def list_alerts_endpoint(
     page_size: int = Query(50, ge=1, le=200),
     sync_low_stock: bool = Query(False),
     db: Session = Depends(get_db),
-) -> list[AlertRead]:
+) -> AlertListResponse:
     if sync_low_stock:
-        sync_low_stock_alerts(db, tenant_id)
+        sync_low_stock_alerts(db, user.tenant_id)
     items, total, unread = list_alerts(
         db,
-        tenant_id,
+        user.tenant_id,
         alert_type,
         status,
         module=module,

@@ -28,8 +28,9 @@ export function guessCategory(sku = "", name = "") {
 
 export function enrichApiProduct(apiRow, index = 0) {
   const category = guessCategory(apiRow.sku, apiRow.name);
-  const stock = 50 + ((apiRow.id || index) * 37) % 450;
-  const minStock = 20;
+  const stock = apiRow.current_stock != null ? Number(apiRow.current_stock) : 50 + ((apiRow.id || index) * 37) % 450;
+  const minStock = apiRow.min_stock != null ? Number(apiRow.min_stock) : 20;
+  const maxStock = apiRow.max_stock != null ? Number(apiRow.max_stock) : minStock * 10;
   return {
     id: apiRow.id,
     product_code: `PRD${String(apiRow.id).padStart(3, "0")}`,
@@ -45,7 +46,7 @@ export function enrichApiProduct(apiRow, index = 0) {
     purchase_price: apiRow.unit_cost ?? 0,
     selling_price: apiRow.unit_price ?? 0,
     min_stock: minStock,
-    max_stock: minStock * 10,
+    max_stock: maxStock,
     current_stock: stock,
     warehouse: WAREHOUSES[index % WAREHOUSES.length],
     description: apiRow.description || "",

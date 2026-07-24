@@ -117,6 +117,8 @@ def get_sidebar_menus(
     db.refresh(current_user, ["roles"])
     menus: list[SidebarItemResponse] = []
     for section in SIDEBAR_MENU_CATALOG:
+        if section["key"] == "alerts" and "Operator" in [r.name for r in current_user.roles]:
+            continue
         children_src = section.get("children") or []
         # Parent module must be granted (prevents Operator seeing Masters via Machines).
         if not _user_can_see_module(current_user, section["module"]):

@@ -71,7 +71,7 @@ class WorkOrderUpdate(BaseModel):
 
 
 class WorkOrderQuickCreate(BaseModel):
-    tenant_id: int
+    tenant_id: int | None = None
     product_id: int
     planned_quantity: float
     machine_id: int | None = None

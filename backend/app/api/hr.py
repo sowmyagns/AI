@@ -4,7 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
-from app.core.permissions import require_permission, tenant_scope
+from app.core.permissions import (
+    require_any_permission,
+    require_permission,
+    tenant_scope,
+    tenant_scope_any,
+)
 from app.models.user import User
 from app.schemas.hr import (
     AttendanceRecordCreate,
@@ -83,6 +88,8 @@ from app.services.hr_extended_service import (
 router = APIRouter(prefix="/hr", tags=["hr"])
 
 MODULE = "hr"
+ATT_SCOPE = tenant_scope_any("hr", "attendance")
+ATT_PERM = require_any_permission("hr", "attendance")
 
 
 @router.get("/dashboard")
@@ -102,7 +109,7 @@ def create_employee_endpoint(
 
 @router.get("/employees", response_model=list[EmployeeRead])
 def list_employees_endpoint(
-    tenant_id: int = Depends(tenant_scope(MODULE)), db: Session = Depends(get_db)
+    tenant_id: int = Depends(ATT_SCOPE), db: Session = Depends(get_db)
 ):
     return list_employees(db, tenant_id)
 
@@ -119,7 +126,7 @@ def create_shift_endpoint(
 
 @router.get("/shifts", response_model=list[ShiftRead])
 def list_shifts_endpoint(
-    tenant_id: int = Depends(tenant_scope(MODULE)), db: Session = Depends(get_db)
+    tenant_id: int = Depends(ATT_SCOPE), db: Session = Depends(get_db)
 ):
     return list_shifts(db, tenant_id)
 
@@ -127,7 +134,7 @@ def list_shifts_endpoint(
 @router.post("/attendance", response_model=AttendanceRecordRead)
 def create_attendance_endpoint(
     payload: AttendanceRecordCreate,
-    user: User = Depends(require_permission(MODULE)),
+    user: User = Depends(ATT_PERM),
     db: Session = Depends(get_db),
 ):
     payload.tenant_id = user.tenant_id
@@ -138,7 +145,7 @@ def create_attendance_endpoint(
 def clock_in_endpoint(
     employee_id: int = Query(...),
     record_date: date = Query(...),
-    tenant_id: int = Depends(tenant_scope(MODULE)),
+    tenant_id: int = Depends(ATT_SCOPE),
     db: Session = Depends(get_db),
 ):
     return record_clock_in(db, tenant_id, employee_id, record_date)
@@ -148,7 +155,7 @@ def clock_in_endpoint(
 def clock_out_endpoint(
     employee_id: int = Query(...),
     record_date: date = Query(...),
-    tenant_id: int = Depends(tenant_scope(MODULE)),
+    tenant_id: int = Depends(ATT_SCOPE),
     db: Session = Depends(get_db),
 ):
     rec = record_clock_out(db, tenant_id, employee_id, record_date)
@@ -159,7 +166,7 @@ def clock_out_endpoint(
 
 @router.get("/attendance", response_model=list[AttendanceRecordRead])
 def list_attendance_endpoint(
-    tenant_id: int = Depends(tenant_scope(MODULE)),
+    tenant_id: int = Depends(ATT_SCOPE),
     date_from: date | None = Query(None),
     date_to: date | None = Query(None),
     employee_id: int | None = Query(None),
@@ -334,19 +341,19 @@ def deactivate_department_endpoint(
 
 
 @router.get("/employees/summary", response_model=EmployeeSummaryRead)
-def employees_summary(tenant_id: int = Depends(tenant_scope(MODULE)), db: Session = Depends(get_db)):
+def employees_summary(tenant_id: int = Depends(ATT_SCOPE), db: Session = Depends(get_db)):
     return get_employee_summary(db, tenant_id)
 
 
 @router.get("/employees/enriched", response_model=list[EmployeeListRead])
-def employees_enriched(tenant_id: int = Depends(tenant_scope(MODULE)), db: Session = Depends(get_db)):
+def employees_enriched(tenant_id: int = Depends(ATT_SCOPE), db: Session = Depends(get_db)):
     return list_employees_enriched(db, tenant_id)
 
 
 @router.get("/attendance/summary", response_model=AttendanceSummaryRead)
 def attendance_summary(
     record_date: date | None = Query(None),
-    tenant_id: int = Depends(tenant_scope(MODULE)),
+    tenant_id: int = Depends(ATT_SCOPE),
     db: Session = Depends(get_db),
 ):
     return get_attendance_summary(db, tenant_id, record_date)
@@ -355,7 +362,7 @@ def attendance_summary(
 @router.get("/attendance/enriched", response_model=list[AttendanceListRead])
 def attendance_enriched(
     record_date: date | None = Query(None),
-    tenant_id: int = Depends(tenant_scope(MODULE)),
+    tenant_id: int = Depends(ATT_SCOPE),
     db: Session = Depends(get_db),
 ):
     return list_attendance_enriched(db, tenant_id, record_date)

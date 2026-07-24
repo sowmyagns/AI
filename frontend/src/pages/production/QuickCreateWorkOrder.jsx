@@ -8,7 +8,6 @@ import {
   getProducts,
   getMachines,
   quickCreateWorkOrder,
-  seedProducts,
 } from "../../api/productionApi";
 import useTenantId from "../../hooks/useTenantId";
 
@@ -23,7 +22,6 @@ export default function QuickCreateWorkOrder() {
   const [products, setProducts] = useState([]);
   const [machines, setMachines] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [seeding, setSeeding] = useState(false);
   const [form, setForm] = useState({
     product_id: "",
     planned_quantity: "",
@@ -36,15 +34,8 @@ export default function QuickCreateWorkOrder() {
     const load = async () => {
       setLoading(true);
       try {
-        let pRes = await getProducts(tenantId);
-        let prodList = pRes?.data || [];
-        if (prodList.length === 0) {
-          setSeeding(true);
-          await seedProducts();
-          pRes = await getProducts(tenantId);
-          prodList = pRes?.data || [];
-          setSeeding(false);
-        }
+        const pRes = await getProducts(tenantId);
+        const prodList = pRes?.data || [];
         const mRes = await getMachines(tenantId);
         setProducts(prodList);
         setMachines(mRes?.data || []);
@@ -82,14 +73,14 @@ export default function QuickCreateWorkOrder() {
         machine_id: form.machine_id ? Number(form.machine_id) : null,
       });
       addToast("Work order created successfully", "success");
-      navigate("/production");
+      navigate("/production/work-orders");
     } catch (err) {
       const detail = err.response?.data?.detail;
       const msg = Array.isArray(detail)
         ? detail.map((d) => d.msg || d.message).join(", ")
         : typeof detail === "string"
           ? detail
-          : "Unable to create work order.";
+          : err.response?.data?.message || "Unable to create work order.";
       setError(msg);
     } finally {
       setSaving(false);
@@ -147,7 +138,7 @@ export default function QuickCreateWorkOrder() {
           >
             <option value="">
               {products.length === 0
-                ? (seeding ? "Loading..." : "No products – seed first")
+                ? "No products available – please add products first"
                 : t("quickCreateWorkOrder.selectProduct", { defaultValue: "Select product" })}
             </option>
             {products.map((p) => (

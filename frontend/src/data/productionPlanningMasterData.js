@@ -97,6 +97,7 @@ export function enrichApiOrder(row, index = 0) {
 export function computePlanningSummary(orders) {
   const counts = { planned: 0, in_progress: 0, completed: 0, delayed: 0, cancelled: 0 };
   let todaysProduction = 0;
+  const today = new Date().toISOString().slice(0, 10);
   orders.forEach((o) => {
     const s = o.status;
     if (s === "cancelled") counts.cancelled += 1;

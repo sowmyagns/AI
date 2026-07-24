@@ -36,7 +36,7 @@ import { quickActionsRef } from "../../../data/referenceDashboardData";
 import { getErpDashboard } from "../../../api/dashboardApi";
 import useAuth from "../../../hooks/useAuth";
 import useManufacturingRefresh from "../../../hooks/useManufacturingRefresh";
-import { userCanAccess } from "../../../config/permissions";
+import { userCanAccess, isOperator } from "../../../config/permissions";
 import { CardShell, KpiIcon, StatusBadge, TrendBadge } from "./ReferenceParts";
 
 const tooltipStyle = {
@@ -386,6 +386,7 @@ function AlertsNotifications({ alerts = [] }) {
 function QuickActions() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  if (isOperator(user)) return null;
   const visible = quickActionsRef.filter((_, i) => userCanAccess(user, QUICK_ACTION_MODULES[i]));
   if (!visible.length) return null;
   return (
@@ -418,7 +419,7 @@ function RecentWorkOrders({ workOrders = [] }) {
   return (
     <CardShell
       title={t("refDashboard.recentWorkOrders")}
-      action={<Link to="/alerts" className="text-xs font-semibold text-[#2563EB] hover:underline">{t("common.viewAll")}</Link>}
+      action={<Link to="/production/work-orders" className="text-xs font-semibold text-[#2563EB] hover:underline">{t("common.viewAll")}</Link>}
     >
       {!workOrders.length ? (
         <p className="py-6 text-center text-sm text-slate-500">{t("common.noRecords", "No records found.")}</p>
@@ -484,6 +485,7 @@ function TodaysSummary({ items = [] }) {
 
 export default function ReferenceDashboard() {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [apiData, setApiData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -566,13 +568,15 @@ export default function ReferenceDashboard() {
       </div>
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
-        <div className="xl:col-span-3">
-          <QuickActions />
-        </div>
-        <div className="xl:col-span-5">
+        {!isOperator(user) && (
+          <div className="xl:col-span-3">
+            <QuickActions />
+          </div>
+        )}
+        <div className={isOperator(user) ? "xl:col-span-7" : "xl:col-span-5"}>
           <RecentWorkOrders workOrders={workOrdersLive} />
         </div>
-        <div className="xl:col-span-4">
+        <div className={isOperator(user) ? "xl:col-span-5" : "xl:col-span-4"}>
           <TodaysSummary items={apiData?.todays_summary || []} />
         </div>
       </div>

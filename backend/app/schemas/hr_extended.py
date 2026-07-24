@@ -15,6 +15,7 @@ class EmployeeSummaryRead(BaseModel):
 class EmployeeListRead(BaseModel):
     id: int
     employee_id: str
+    employee_code: str | None = None
     full_name: str
     department: str | None = None
     designation: str | None = None

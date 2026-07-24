@@ -29,7 +29,8 @@ export default function ResourcePage({
   columns,
   fetcher,
   createFn,
-  fields = [],
+  fields: fieldsProp,
+  formFields,
   searchKeys = [],
   filters = [],
   createLabel = "+ New",
@@ -38,6 +39,7 @@ export default function ResourcePage({
   rowActions,
   transformPayload,
 }) {
+  const fields = fieldsProp || formFields || [];
   const { user } = useAuth();
   const { addToast } = useToast();
   const tenantId = user?.tenant_id ?? 1;
@@ -51,7 +53,7 @@ export default function ResourcePage({
   const initialForm = useMemo(() => {
     const f = {};
     fields.forEach((field) => {
-      f[field.name] = field.default ?? "";
+      f[field.name] = field.default ?? field.defaultValue ?? "";
     });
     return f;
   }, [fields]);

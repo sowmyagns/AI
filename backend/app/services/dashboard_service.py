@@ -51,17 +51,48 @@ def _machine_status_breakdown(machines: list[Machine]) -> list[dict]:
     ]
 
 
-def _top_machines(machines: list[Machine], limit: int = 5) -> list[dict]:
-    ranked = sorted(
-        machines,
-        key=lambda m: float(m.efficiency_pct or m.oee_pct or 0),
-        reverse=True,
+def _top_machines(db: Session, tenant_id: int, machines: list[Machine], limit: int = 5) -> list[dict]:
+    today = date.today()
+    week_ago = today - timedelta(days=7)
+
+    machine_report_map: dict[int, tuple[float, float]] = {}
+    reports = list(
+        db.scalars(
+            select(DailyProductionReport).where(
+                DailyProductionReport.tenant_id == tenant_id,
+                DailyProductionReport.report_date >= week_ago,
+            )
+        ).all()
     )
+    for r in reports:
+        if r.machine_id:
+            prod = float(r.produced_quantity or 0)
+            plan = float(r.planned_quantity or 0) or prod or 1.0
+            cur_prod, cur_plan = machine_report_map.get(r.machine_id, (0.0, 0.0))
+            machine_report_map[r.machine_id] = (cur_prod + prod, cur_plan + plan)
+
+    def _calc_utilization(m: Machine) -> float:
+        if m.efficiency_pct is not None and float(m.efficiency_pct) > 0:
+            return float(m.efficiency_pct)
+        if m.oee_pct is not None and float(m.oee_pct) > 0:
+            return float(m.oee_pct)
+
+        if m.id in machine_report_map:
+            produced, planned = machine_report_map[m.id]
+            if planned > 0:
+                return min(100.0, max(0.0, round((produced / planned) * 100, 1)))
+
+        st = (m.status or "").lower()
+        if st in ("idle", "offline", "stopped", "down", "breakdown"):
+            return 0.0
+        return 0.0
+
+    ranked = sorted(machines, key=_calc_utilization, reverse=True)
     if not ranked:
         return []
     result = []
     for machine in ranked[:limit]:
-        util = float(machine.efficiency_pct or machine.oee_pct or 0)
+        util = _calc_utilization(machine)
         result.append({
             "id": machine.code or f"M-{machine.id}",
             "name": machine.name,
@@ -181,18 +212,29 @@ def get_erp_dashboard(db: Session, tenant_id: int, user: User | None = None) -> 
         ).all()
     )
 
-    today_production = int(sum(float(r.produced_quantity or 0) for r in today_reports))
-    yesterday_production = int(sum(float(r.produced_quantity or 0) for r in yesterday_reports))
-    # Fallback: sum actual_quantity from today's completed/running work orders
-    if today_production == 0:
-        wo_actual = db.scalar(
-            select(func.sum(WorkOrder.actual_quantity)).where(
-                WorkOrder.tenant_id == tenant_id,
-                WorkOrder.status.in_(("completed", "in_progress", "running", "done")),
+    today_started_orders = int(
+        db.scalar(
+            select(func.count(ProductionOrder.id)).where(
+                ProductionOrder.tenant_id == tenant_id,
+                ProductionOrder.start_date.isnot(None),
+                func.date(ProductionOrder.start_date) == today,
+                ProductionOrder.status != "cancelled",
             )
-        )
-        today_production = int(wo_actual or 0)
-    good_qty = today_production
+        ) or 0
+    )
+    yesterday_started_orders = int(
+        db.scalar(
+            select(func.count(ProductionOrder.id)).where(
+                ProductionOrder.tenant_id == tenant_id,
+                ProductionOrder.start_date.isnot(None),
+                func.date(ProductionOrder.start_date) == yesterday,
+                ProductionOrder.status != "cancelled",
+            )
+        ) or 0
+    )
+    today_production = today_started_orders
+    yesterday_production = yesterday_started_orders
+    good_qty = int(sum(float(r.produced_quantity or 0) for r in today_reports))
     reject_qty = int(sum(float(r.scrap_quantity or 0) for r in today_reports))
 
     machines = list(db.scalars(select(Machine).where(Machine.tenant_id == tenant_id)).all())
@@ -409,7 +451,8 @@ def get_erp_dashboard(db: Session, tenant_id: int, user: User | None = None) -> 
             for a in alert_rows
         ]
     except Exception:
-        notifications = get_user_notifications(db, user) if user else {"notifications": []}
+        notifications = get_user_notifications(db, user) if user else {"items": []}
+        items = notifications.get("items") or notifications.get("notifications") or []
         alerts_feed = [
             {
                 "id": n.get("id"),
@@ -419,7 +462,21 @@ def get_erp_dashboard(db: Session, tenant_id: int, user: User | None = None) -> 
                 "icon": "alert",
                 "link": n.get("action_url") or "/alerts",
             }
-            for n in notifications.get("notifications", [])[:5]
+            for n in items[:5]
+        ]
+    if not alerts_feed and user:
+        notifications = get_user_notifications(db, user)
+        items = notifications.get("items") or notifications.get("notifications") or []
+        alerts_feed = [
+            {
+                "id": n.get("id"),
+                "message": n.get("title") or n.get("message"),
+                "time": n.get("created_at"),
+                "color": "#3B82F6",
+                "icon": "alert",
+                "link": n.get("action_url") or "/alerts",
+            }
+            for n in items[:5]
         ]
 
     total_wo = total_orders or (completed_orders + in_progress_orders + on_hold_orders + pending_orders)
@@ -440,12 +497,12 @@ def get_erp_dashboard(db: Session, tenant_id: int, user: User | None = None) -> 
             {
                 "id": "today-production",
                 "title": "Today's Production",
-                "value": str(today_production or shop.todays_production or 0),
+                "value": str(today_production),
                 "unit": "Pcs",
                 "trend": f"{prod_trend}%",
                 "trendUp": prod_up,
                 "trendLabel": "vs yesterday",
-                "link": "/production/reports",
+                "link": f"/production/planning?date_from={today.isoformat()}&date_to={today.isoformat()}",
             },
             {
                 "id": "machines-running",
@@ -491,7 +548,7 @@ def get_erp_dashboard(db: Session, tenant_id: int, user: User | None = None) -> 
         "production_overview_weekly": _weekly_overview(db, tenant_id),
         "production_overview_monthly": _monthly_overview(db, tenant_id),
         "shop_floor_status": _machine_status_breakdown(machines),
-        "top_machines": _top_machines(machines),
+        "top_machines": _top_machines(db, tenant_id, machines),
         "orders_overview": {
             "total": total_wo,
             "inProgress": in_progress_orders,

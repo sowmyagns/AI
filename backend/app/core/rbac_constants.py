@@ -107,6 +107,7 @@ PERMISSION_MATRIX = {
             "factoryMonitor",
             "attendance",
             "documents",
+            "alerts",
         ],
         "actions": [
             "production:read",

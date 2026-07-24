@@ -60,11 +60,16 @@ function SummaryCard({ label, value, icon: Icon, color }) {
 }
 
 function StatusPill({ status }) {
-  const active = status === "active";
+  const active = status === 'active';
+
   return (
-    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${
-      active ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600"
-    }`}>
+    <span
+      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${
+        active
+          ? 'bg-green-100 text-green-700'
+          : 'bg-slate-100 text-slate-600'
+      }`}
+    >
       {status}
     </span>
   );
@@ -175,20 +180,48 @@ export default function ProductsMaster() {
       description: form.description || null,
       unit_cost: form.purchase_price ? Number(form.purchase_price) : null,
       unit_price: form.selling_price ? Number(form.selling_price) : null,
+      min_stock: form.min_stock ? Number(form.min_stock) : 1,
+      current_stock: form.current_stock ? Number(form.current_stock) : 1,
     };
+    const code = `PRD${String(products.length + 1).padStart(3, "0")}`;
+
     try {
       if (formProduct?.id && typeof formProduct.id === "number") {
         await updateProduct(formProduct.id, payload);
+        setProducts((prev) =>
+          prev.map((p) =>
+            p.id === formProduct.id
+              ? {
+                  ...p,
+                  ...form,
+                  purchase_price: Number(form.purchase_price) || 0,
+                  selling_price: Number(form.selling_price) || 0,
+                  min_stock: Number(form.min_stock) || 1,
+                  current_stock: Number(form.current_stock) || 1,
+                }
+              : p
+          )
+        );
         addToast("Product updated");
       } else {
-        await createProduct(payload);
+        const result = await createProduct(payload);
+        const newProduct = {
+          ...enrichApiProduct({ id: result?.id ?? `new-${Date.now()}`, ...payload }, products.length),
+          id: result?.id ?? `new-${Date.now()}`,
+          product_code: code,
+          ...form,
+          purchase_price: Number(form.purchase_price) || 0,
+          selling_price: Number(form.selling_price) || 0,
+          min_stock: Number(form.min_stock) || 1,
+          current_stock: Number(form.current_stock) || 1,
+          created_at: new Date().toISOString().slice(0, 10),
+        };
+        setProducts((prev) => [newProduct, ...prev]);
         addToast("Product created");
       }
       setFormProduct(null);
-      loadProducts();
     } catch (err) {
       const localId = `new-${Date.now()}`;
-      const code = `PRD${String(products.length + 1).padStart(3, "0")}`;
       const newProduct = {
         ...enrichApiProduct({ id: localId, ...payload }, products.length),
         id: localId,
@@ -196,12 +229,15 @@ export default function ProductsMaster() {
         ...form,
         purchase_price: Number(form.purchase_price) || 0,
         selling_price: Number(form.selling_price) || 0,
+        min_stock: Number(form.min_stock) || 1,
+        current_stock: Number(form.current_stock) || 1,
+        created_at: new Date().toISOString().slice(0, 10),
       };
       if (formProduct?.id) {
         setProducts((prev) => prev.map((p) => (p.id === formProduct.id ? { ...p, ...newProduct, id: formProduct.id } : p)));
         addToast("Product updated locally");
       } else {
-        setProducts((prev) => [...prev, newProduct]);
+        setProducts((prev) => [newProduct, ...prev]);
         addToast("Product added locally");
       }
       setFormProduct(null);
@@ -250,11 +286,40 @@ export default function ProductsMaster() {
       label: "Price",
       render: (r) => `₹${Number(r.selling_price || 0).toLocaleString("en-IN")}`,
     },
-    { key: "current_stock", label: "Stock" },
     {
+  key: "current_stock",
+  label: "Stock",
+  render: (r) => `${Number(r.current_stock || 0)} ${r.unit || ""}`.trim(),
+},
+     {
       key: "status",
       label: "Status",
-      render: (r) => <StatusPill status={r.status} />,
+      render: (r) => {
+        const isActive = r.status === 'active';
+        return (
+          <select
+            value={r.status}
+            onChange={(e) => {
+              const newStatus = e.target.value;
+              setProducts((prev) =>
+                prev.map((p) =>
+                  p.id === r.id ? { ...p, status: newStatus } : p
+                )
+              );
+            }}
+            // Dynamic classes applied here based on the isActive boolean
+            className={`cursor-pointer rounded-full border-none px-2.5 py-1 text-xs font-semibold shadow-sm focus:outline-none focus:ring-2 ${
+              isActive
+                ? 'bg-green-100 text-green-700 focus:ring-green-500'
+                : 'bg-red-100 text-red-700 focus:ring-red-500'
+            }`}
+          >
+            {/* Setting option backgrounds to white so the dropdown menu stays readable */}
+            <option value="active" className="bg-white text-slate-900">Active</option>
+            <option value="inactive" className="bg-white text-slate-900">Inactive</option>
+          </select>
+        );
+      },
     },
     {
       key: "actions",

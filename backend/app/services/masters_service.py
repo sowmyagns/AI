@@ -39,6 +39,9 @@ class MastersService:
                 "description": p.description,
                 "unit_cost": float(p.unit_cost) if p.unit_cost else None,
                 "unit_price": float(p.unit_price) if p.unit_price else None,
+                "min_stock": int(p.min_stock) if p.min_stock is not None else None,
+                "max_stock": int(p.max_stock) if p.max_stock is not None else None,
+                "current_stock": int(p.current_stock) if p.current_stock is not None else 0,
             }
             for p in list_products(self.db, self.tenant_id)
         ]
@@ -54,6 +57,9 @@ class MastersService:
             "description": p.description,
             "unit_cost": float(p.unit_cost) if p.unit_cost else None,
             "unit_price": float(p.unit_price) if p.unit_price else None,
+            "min_stock": int(p.min_stock) if p.min_stock is not None else None,
+            "max_stock": int(p.max_stock) if p.max_stock is not None else None,
+            "current_stock": int(p.current_stock) if p.current_stock is not None else 0,
             "bom": [self.bom.enrich_item(b) for b in list_bom(self.db, self.tenant_id, p.id)],
         }
 

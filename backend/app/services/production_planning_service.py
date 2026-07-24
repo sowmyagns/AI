@@ -178,7 +178,7 @@ def get_production_planning_summary(
                 ProductionOrder.status.in_(tuple(IN_PROGRESS_STATUSES | PLANNED_STATUSES)),
             )
         ) or 0
-    ) // max(len(orders), 1)
+    )
 
     todays_production = int(
         db.scalar(

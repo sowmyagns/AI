@@ -8,6 +8,9 @@ class ProductBase(BaseModel):
     description: str | None = None
     unit_cost: float | None = None
     unit_price: float | None = None
+    min_stock: int | None = Field(None, ge=1)
+    max_stock: int | None = Field(None, ge=1)
+    current_stock: int | None = Field(None, ge=1)
 
 
 class ProductCreate(ProductBase):
@@ -20,6 +23,9 @@ class ProductUpdate(BaseModel):
     description: str | None = None
     unit_cost: float | None = None
     unit_price: float | None = None
+    min_stock: int | None = Field(None, ge=1)
+    max_stock: int | None = Field(None, ge=1)
+    current_stock: int | None = Field(None, ge=1)
 
 
 class ProductDetailRead(ProductBase):

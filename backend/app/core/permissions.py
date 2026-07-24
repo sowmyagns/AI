@@ -42,25 +42,27 @@ def user_has_permission(user: User, module: str) -> bool:
     if user_is_admin(user):
         return True
     perms = get_user_permissions(user)
-    if module in perms:
+    if "admin" in perms or "*" in perms:
         return True
-    return any(p.startswith(f"{module}:") for p in perms)
+    return module in perms
+
+
+def user_has_any_permission(user: User, *modules: str) -> bool:
+    if user_is_admin(user):
+        return True
+    perms = get_user_permissions(user)
+    if "admin" in perms or "*" in perms:
+        return True
+    return any(m in perms for m in modules)
 
 
 def user_can_action(user: User, module: str, action: str) -> bool:
     if user_is_admin(user):
         return True
     perms = get_user_permissions(user)
-    if "*" in perms:
+    if "admin" in perms or "*" in perms or f"{module}:*" in perms:
         return True
-    if f"{module}:{action}" in perms or f"{module}:*" in perms:
-        return True
-    roles = set(get_role_names(user))
-    if roles & RESTRICTED_ACTION_ROLES:
-        return False
-    if module in perms:
-        return True
-    return False
+    return f"{module}:{action}" in perms or module in perms
 
 
 def require_admin(current_user: User = Depends(get_current_user)) -> User:
@@ -78,6 +80,18 @@ MODULE_FORBIDDEN_MESSAGE = "You do not have permission to access this module."
 def require_permission(module: str):
     def dependency(current_user: User = Depends(get_current_user)) -> User:
         if not user_has_permission(current_user, module):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=MODULE_FORBIDDEN_MESSAGE,
+            )
+        return current_user
+
+    return dependency
+
+
+def require_any_permission(*modules: str):
+    def dependency(current_user: User = Depends(get_current_user)) -> User:
+        if not user_has_any_permission(current_user, *modules):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=MODULE_FORBIDDEN_MESSAGE,
@@ -106,6 +120,13 @@ def require_action(module: str, action: str):
 
 def tenant_scope(module: str):
     def dependency(current_user: User = Depends(require_permission(module))) -> int:
+        return current_user.tenant_id
+
+    return dependency
+
+
+def tenant_scope_any(*modules: str):
+    def dependency(current_user: User = Depends(require_any_permission(*modules))) -> int:
         return current_user.tenant_id
 
     return dependency

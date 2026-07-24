@@ -79,6 +79,7 @@ def list_employees_enriched(db: Session, tenant_id: int) -> list[EmployeeListRea
         EmployeeListRead(
             id=e.id,
             employee_id=e.employee_code,
+            employee_code=e.employee_code,
             full_name=e.full_name,
             department=e.department,
             designation=getattr(e, "designation", None) or "—",

@@ -173,7 +173,11 @@ export default function Attendance() {
         <form onSubmit={handleClock} className="flex flex-wrap items-end gap-3">
           <select value={clockEmployee} onChange={(e) => setClockEmployee(e.target.value)} required className="rounded-lg border px-3 py-2 text-sm">
             <option value="">Select Employee</option>
-            {employees.map((e) => <option key={e.id} value={e.id}>{e.full_name} ({e.employee_code})</option>)}
+            {employees.map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.full_name} ({e.employee_code || e.employee_id || `EMP-${e.id}`})
+              </option>
+            ))}
           </select>
           <select value={action} onChange={(e) => setAction(e.target.value)} className="rounded-lg border px-3 py-2 text-sm">
             <option value="in">Clock In</option>

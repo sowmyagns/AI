@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 from typing import Any
 
+from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, Field
 
 
@@ -19,7 +20,12 @@ class ApiResponse(BaseModel):
 
 
 def success_response(message: str, data: Any = None) -> dict:
-    return ApiResponse(success=True, message=message, data=data, errors=None).model_dump()
+    return ApiResponse(
+        success=True,
+        message=message,
+        data=jsonable_encoder(data) if data is not None else None,
+        errors=None,
+    ).model_dump()
 
 
 def error_response(
@@ -27,4 +33,9 @@ def error_response(
     errors: list[str] | str | None = None,
     data: Any = None,
 ) -> dict:
-    return ApiResponse(success=False, message=message, data=data, errors=errors).model_dump()
+    return ApiResponse(
+        success=False,
+        message=message,
+        data=jsonable_encoder(data) if data is not None else None,
+        errors=errors,
+    ).model_dump()

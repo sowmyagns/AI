@@ -1,6 +1,7 @@
 """Masters API — Products, BOM, Machines (sidebar: Masters section)."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
@@ -31,7 +32,7 @@ def _dump(obj):
         return obj.model_dump(mode="json")
     if isinstance(obj, list):
         return [_dump(x) for x in obj]
-    return obj
+    return jsonable_encoder(obj)
 
 
 # ── Products ───────────────────────────────────────────────────────────────

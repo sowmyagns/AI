@@ -78,7 +78,7 @@ export default function TaskManagement() {
           render: (r) => (r.due_date ? String(r.due_date).slice(0, 10) : "—"),
         },
       ]}
-      formFields={[
+      fields={[
         { name: "title", label: "Title", required: true },
         { name: "description", label: "Description", type: "textarea", full: true },
         {

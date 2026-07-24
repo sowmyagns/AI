@@ -11,7 +11,7 @@ from app.services.alert_event_service import DEFAULT_LINKS, emit_alert, fanout_a
 from app.services.inventory_service import get_inventory_dashboard
 
 
-def create_alert(db: Session, payload: AlertCreate) -> Alert:
+def create_alert(db: Session, payload: AlertCreate, fanout: bool = True) -> Alert:
     data = payload.model_dump()
     if not data.get("triggered_at"):
         data["triggered_at"] = datetime.now(timezone.utc)
@@ -24,6 +24,7 @@ def create_alert(db: Session, payload: AlertCreate) -> Alert:
     db.commit()
     db.refresh(a)
     return a
+
 
 
 def list_alerts(
@@ -125,6 +126,32 @@ def resolve_alert(db: Session, alert_id: int, tenant_id: int | None = None, reso
     db.commit()
     db.refresh(alert)
     return alert
+
+
+def mark_alert_read(db: Session, alert_id: int, tenant_id: int) -> Alert | None:
+    alert = get_alert(db, alert_id, tenant_id)
+    if not alert:
+        return None
+    alert.is_read = True
+    db.commit()
+    db.refresh(alert)
+    return alert
+
+
+def mark_all_alerts_read(db: Session, tenant_id: int, user: User | None = None) -> int:
+    stmt = select(Alert).where(Alert.tenant_id == tenant_id, Alert.is_read.is_(False))
+    alerts = list(db.scalars(stmt).all())
+    updated_count = 0
+    for a in alerts:
+        if user and not user_is_admin(user) and a.target_role:
+            role_names = {r.lower() for r in get_role_names(user)}
+            targets = {t.strip().lower() for t in a.target_role.split(",") if t.strip()}
+            if not (targets & role_names):
+                continue
+        a.is_read = True
+        updated_count += 1
+    db.commit()
+    return updated_count
 
 
 def delete_alert(db: Session, alert_id: int, tenant_id: int) -> bool:

@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, Numeric, String, Text
+from sqlalchemy import ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
@@ -16,6 +16,9 @@ class Product(Base, TimestampMixin):
     description: Mapped[str | None] = mapped_column(Text)
     unit_cost: Mapped[float | None] = mapped_column(Numeric(12, 2))
     unit_price: Mapped[float | None] = mapped_column(Numeric(12, 2))
+    min_stock: Mapped[int | None] = mapped_column(Integer, default=1)
+    max_stock: Mapped[int | None] = mapped_column(Integer, default=100)
+    current_stock: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     tenant = relationship("Tenant", back_populates="products")
     bom_items = relationship(

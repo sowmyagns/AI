@@ -42,11 +42,14 @@ export default function ManufacturingWorkflowBar({
           )}
           {curr && (
             <>
-              <span className="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-2.5 py-1 font-semibold text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+              <Link
+                to={curr.path}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-2.5 py-1 font-semibold text-amber-900 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-200"
+              >
                 <span aria-hidden>🟡</span>
                 <span className="text-slate-500 dark:text-slate-400">Current:</span>
                 {curr.label}
-              </span>
+              </Link>
               {next && <span className="text-slate-300 dark:text-slate-600">↓</span>}
             </>
           )}

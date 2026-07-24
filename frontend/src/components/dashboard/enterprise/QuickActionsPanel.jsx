@@ -1,9 +1,13 @@
 import { Link } from "react-router-dom";
 
 import { quickActions } from "../../../data/dashboardDummyData";
+import useAuth from "../../../hooks/useAuth";
+import { isOperator } from "../../../config/permissions";
 import DashboardIcon from "./DashboardIcons";
 
 export default function QuickActionsPanel() {
+  const { user } = useAuth();
+  if (isOperator(user)) return null;
   return (
     <section className="rounded-2xl border border-slate-100/80 bg-white/90 p-5 shadow-[0_4px_24px_rgba(15,23,42,0.05)] backdrop-blur-sm sm:p-6">
       <h3 className="mb-4 text-base font-bold text-[#0F172A]">Quick Actions</h3>
